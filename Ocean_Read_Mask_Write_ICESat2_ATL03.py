@@ -556,26 +556,17 @@ def main():
             delta_time_total_high_med_conf = delta_time_total_high_med_conf[landmask]
             utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
             icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_masked.txt'
-            icesat2_time_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_masked_time.txt'
         else:
             icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf.txt'
-            icesat2_time_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_time.txt'
         if geophys_corr_toggle == False:
             icesat2_file = icesat2_file.replace('ATL03','UNCORRECTED_ATL03')
-            icesat2_time_file = icesat2_time_file.replace('ATL03','UNCORRECTED_ATL03')
         if ocean_tide_replacement_toggle == True:
             icesat2_file = icesat2_file.replace('_ATL03','_ATL03_FES2014')
         
-        f_write = open(icesat2_file,'w')
-        np.savetxt(f_write,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf],fmt='%10.5f',delimiter=',')
-        f_write.close()
         if timestamp_toggle == True:
-            f_time_write = open(icesat2_time_file,'w')
-            np.savetxt(f_time_write,np.c_[utc_time_high_med_conf],fmt='%s')
-            f_time_write.close()
-            subprocess.run('paste -d , ' + icesat2_file + ' ' + icesat2_time_file+ ' > tmp_paste.txt',shell=True)
-            subprocess.run('mv tmp_paste.txt ' + icesat2_file,shell=True)
-            subprocess.run('rm ' + icesat2_time_file,shell=True)
+            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
+        else:
+            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf,utc_time_high_med_conf.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
         
         if DTU21_toggle == True:
             DTU21_cond = DTU21_filter_icesat2(h_high_med_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],DTU21_threshold,DTU21_path)
@@ -586,25 +577,16 @@ def main():
             utc_time_high_med_conf_DTU21 = gps2utc(delta_time_total_high_med_conf_DTU21)
             if landmask_toggle == True:
                 icesat2_dtu21_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_masked_DTU21_filtered_threshold_' + str(DTU21_threshold) + '_m.txt'
-                icesat2_dtu21_time_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_masked_time_DTU21_filtered_threshold_' + str(DTU21_threshold) + '_m.txt'
             else:
                 icesat2_dtu21_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_DTU21_filtered_threshold_' + str(DTU21_threshold) + '_m.txt'
-                icesat2_dtu21_time_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_time_DTU21_filtered_threshold_' + str(DTU21_threshold) + '_m.txt'
             if geophys_corr_toggle == False:
                 icesat2_dtu21_file = icesat2_dtu21_file.replace('ATL03','UNCORRECTED_ATL03')
-                icesat2_dtu21_time_file = icesat2_dtu21_time_file.replace('ATL03','UNCORRECTED_ATL03')
             if ocean_tide_replacement_toggle == True:
                 icesat2_dtu21_file = icesat2_dtu21_file.replace('_ATL03','_ATL03_FES2014')
-            f_write_DTU21 = open(icesat2_dtu21_file,'w')
-            np.savetxt(f_write_DTU21,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21],fmt='%10.5f',delimiter=',')
-            f_write_DTU21.close()
             if timestamp_toggle == True:
-                f_time_write_DTU21 = open(icesat2_dtu21_time_file,'w')
-                np.savetxt(f_time_write_DTU21,np.c_[utc_time_high_med_conf_DTU21],fmt='%s')
-                f_time_write_DTU21.close()
-                subprocess.run('paste -d , ' + icesat2_dtu21_file + ' ' + icesat2_dtu21_time_file+ ' > tmp_paste.txt',shell=True)
-                subprocess.run('mv tmp_paste.txt ' + icesat2_dtu21_file,shell=True)
-                subprocess.run('rm ' + icesat2_dtu21_time_file,shell=True)
+                np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21,utc_time_high_med_conf_DTU21.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
+            else:
+                np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
         print('Done with '+city_name+' at '+datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         print(' ')
 

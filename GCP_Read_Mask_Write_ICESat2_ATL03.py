@@ -505,21 +505,13 @@ def main():
             delta_time_total_high_conf = delta_time_total_high_conf[landmask]
             utc_time_high_conf = gps2utc(delta_time_total_high_conf)
             icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_masked.txt'
-            icesat2_time_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_masked_time.txt'
         else:
             icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf.txt'
-            icesat2_time_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_time.txt'
         
-        f_write = open(icesat2_file,'w')
-        np.savetxt(f_write,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%10.5f',delimiter=',')
-        f_write.close()
         if timestamp_toggle:
-            f_time_write = open(icesat2_time_file,'w')
-            np.savetxt(f_time_write,np.c_[utc_time_high_conf],fmt='%s')
-            f_time_write.close()
-            subprocess.run('paste -d , ' + icesat2_file + ' ' + icesat2_time_file+ ' > tmp_paste.txt',shell=True)
-            subprocess.run('mv tmp_paste.txt ' + icesat2_file,shell=True)
-            subprocess.run('rm ' + icesat2_time_file,shell=True)
+            np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
+        else:
+            np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
         
         if SRTM_toggle:
             SRTM_cond = SRTM_filter_icesat2(lon_high_conf,lat_high_conf,h_high_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],user,pw,SRTM_threshold,EGM96_path)
@@ -530,20 +522,12 @@ def main():
             utc_time_high_conf_SRTM = gps2utc(delta_time_total_high_conf_SRTM)
             if landmask_toggle:
                 icesat2_srtm_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_masked_SRTM_filtered_threshold_' + str(SRTM_threshold) + '_m.txt'
-                icesat2_srtm_time_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_masked_time_SRTM_filtered_threshold_' + str(SRTM_threshold) + '_m.txt'
             else:
                 icesat2_srtm_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_SRTM_filtered_threshold_' + str(SRTM_threshold) + '_m.txt'
-                icesat2_srtm_time_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_time_SRTM_filtered_threshold_' + str(SRTM_threshold) + '_m.txt'
-            f_write_SRTM = open(icesat2_srtm_file,'w')
-            np.savetxt(f_write_SRTM,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%10.5f',delimiter=',')
-            f_write_SRTM.close()
             if timestamp_toggle:
-                f_time_write_SRTM = open(icesat2_srtm_time_file,'w')
-                np.savetxt(f_time_write_SRTM,np.c_[utc_time_high_conf_SRTM],fmt='%s')
-                f_time_write_SRTM.close()
-                subprocess.run('paste -d , ' + icesat2_srtm_file + ' ' + icesat2_srtm_time_file+ ' > tmp_paste.txt',shell=True)
-                subprocess.run('mv tmp_paste.txt ' + icesat2_srtm_file,shell=True)
-                subprocess.run('rm ' + icesat2_srtm_time_file,shell=True)
+                np.savetxt(icesat2_srtm_file,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM,utc_time_high_conf_SRTM.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
+            else:
+                np.savetxt(icesat2_srtm_file,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
         print('Done with '+city_name+' at '+datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         print(' ')
 
