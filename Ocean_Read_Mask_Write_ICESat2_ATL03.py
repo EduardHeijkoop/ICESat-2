@@ -94,7 +94,7 @@ def gps2utc(gps_time):
     leap_seconds = -18 #applicable to everything after 2017-01-01, UTC is currently 18 s behind GPS
     dt = (gps_time + leap_seconds) * datetime.timedelta(seconds=1)
     utc_time = t0+dt
-    utc_time_str = [str(x) for x in utc_time]
+    utc_time_str = np.asarray([str(x) for x in utc_time])
     return utc_time_str
 
 def get_token(user):
@@ -564,9 +564,9 @@ def main():
             icesat2_file = icesat2_file.replace('_ATL03','_ATL03_FES2014')
         
         if timestamp_toggle == True:
-            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
-        else:
             np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf,utc_time_high_med_conf.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
+        else:
+            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
         
         if DTU21_toggle == True:
             DTU21_cond = DTU21_filter_icesat2(h_high_med_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],DTU21_threshold,DTU21_path)

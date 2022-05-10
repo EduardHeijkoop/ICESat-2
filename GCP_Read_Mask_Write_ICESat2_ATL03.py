@@ -81,7 +81,7 @@ def gps2utc(gps_time):
     leap_seconds = -18 #applicable to everything after 2017-01-01, UTC is currently 18 s behind GPS
     dt = (gps_time + leap_seconds) * datetime.timedelta(seconds=1)
     utc_time = t0+dt
-    utc_time_str = [str(x) for x in utc_time]
+    utc_time_str = np.asarray([str(x) for x in utc_time])
     return utc_time_str
 
 def get_token(user):
@@ -406,7 +406,7 @@ def SRTM_filter_icesat2(lon,lat,h,icesat2_file,icesat2_dir,df_city,user,pw,SRTM_
     src_proj = src.GetProjection()
     src_geotrans = src.GetGeoTransform()
     match_filename = icesat2_dir + city_name + '/' + city_name + '_SRTM.tif'
-    match_ds = gdal.Open(match_filename,gdalconst.GA_ReadOnly)
+    match_ds = gdal.Open(match_filename,gdalconst.GA_Update)
     match_proj = match_ds.GetProjection()
     match_geotrans = match_ds.GetGeoTransform()
     wide = match_ds.RasterXSize
@@ -509,9 +509,10 @@ def main():
             icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf.txt'
         
         if timestamp_toggle:
-            np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
-        else:
             np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
+        else:
+            np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
+            
         
         if SRTM_toggle:
             SRTM_cond = SRTM_filter_icesat2(lon_high_conf,lat_high_conf,h_high_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],user,pw,SRTM_threshold,EGM96_path)
