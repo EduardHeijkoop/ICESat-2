@@ -384,7 +384,7 @@ def SRTM_filter_icesat2(lon,lat,h,icesat2_file,icesat2_dir,df_city,user,pw,SRTM_
             latCode = f"{int(np.abs(np.floor(lat_range[j]))):02d}"
             SRTM_id = latLetter + latCode + lonLetter + lonCode
             SRTM_list.append(SRTM_id)
-    merge_command = 'gdal_merge.py -q -o ' + icesat2_dir + city_name + '/' + city_name + '_SRTM.tif '
+    merge_command = f'gdal_merge.py -q -o {icesat2_dir}{city_name}/{city_name}_SRTM.tif '
     print('Downloading SRTM...')
     for i in range(len(SRTM_list)):
         DL_command = 'wget --user=' + user + ' --password=' + pw + ' https://e4ftl01.cr.usgs.gov/MEASURES/SRTMGL1.003/2000.02.11/' + SRTM_list[i] + '.SRTMGL1.hgt.zip --no-check-certificate --quiet'
@@ -423,13 +423,15 @@ def SRTM_filter_icesat2(lon,lat,h,icesat2_file,icesat2_dir,df_city,user,pw,SRTM_
     subprocess.run('rm ' + dst_filename,shell=True)
     for jj in range(len(SRTM_list)):
         subprocess.run('rm ' + icesat2_dir + city_name + '/' + SRTM_list[jj] + '.hgt',shell=True)
-    SRTM_sampled_file = icesat2_dir + city_name + '/' + city_name + '_sampled_SRTM.txt'
+    SRTM_sampled_file = f'{icesat2_dir}{city_name}/{city_name}_sampled_SRTM.txt'
     print('Sampling SRTM...')
-    subprocess.run('cut -d\',\' -f1-2 ' + icesat2_file + ' | sed \'s/,/ /g\' | gdallocationinfo -wgs84 -valonly ' + SRTM_wgs84_file + ' > ' + SRTM_sampled_file,shell=True)
+    subprocess.run(f'cut -d\',\' -f1-2 {icesat2_file} | sed \'s/,/ /g\' | gdallocationinfo -wgs84 -valonly {SRTM_wgs84_file} > {SRTM_sampled_file}',shell=True)
     print('Sampled SRTM')
     df_SRTM = pd.read_csv(SRTM_sampled_file,header=None,names=['h_SRTM'],dtype={'h_SRTM':'float'})
     h_sampled_SRTM = np.asarray(df_SRTM.h_SRTM)
     SRTM_cond = np.abs(h - h_sampled_SRTM) < SRTM_threshold
+    subprocess.run(f'rm {SRTM_sampled_file}',shell=True)
+    subprocess.run(f'rm {SRTM_wgs84_file}',shell=True)
     return SRTM_cond
 
 def main():
