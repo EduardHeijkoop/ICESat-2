@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import datetime
 import getpass
+import configparser
 
 from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2,analyze_icesat2_land
 from icesat2_utils import gps2utc,landmask_icesat2,SRTM_filter_icesat2
@@ -12,6 +13,7 @@ from icesat2_utils import gps2utc,landmask_icesat2,SRTM_filter_icesat2
 #Update March 2021: now does landmasking in C
 #Update December 2021: rewrite into functions
 #Update May 2022: Moved all functions to icesat2_utils.py for harmonization with ocean
+#                 Added constants/paths to icesat2_config.ini file
 
 #This script will download ICESat-2 ATL03 geolocated photons for a given region.
 #The point cloud will be masked with a given shapefile (e.g. a coastline), originally used as ground control points (GCPs)
@@ -20,9 +22,13 @@ from icesat2_utils import gps2utc,landmask_icesat2,SRTM_filter_icesat2
 
 
 def main():
-    SRTM_toggle = True
-    landmask_toggle = True
-    timestamp_toggle = True
+    config_file = 'icesat2_config.ini'
+    config = configparser.ConfigParser()
+    config.read(config_file)
+
+    SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
+    landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
+    timestamp_toggle = config.getboolean('GCP_CONSTANTS','timestamp_toggle')
     on_off_str = ('off','on')
 
     print('Current settings:')
@@ -30,19 +36,20 @@ def main():
     print(f'Landmask       : {on_off_str[landmask_toggle]}')
     print(f'Timestamps     : {on_off_str[timestamp_toggle]}')
 
-    input_file = '/home/eheijkoop/INPUTS/GCP_Input.txt' #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
-    osm_shp_path = '/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/Coast/land-polygons-complete-4326/land_polygons.shp' #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
-    icesat2_dir = '/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/ICESat-2/' #output directory, which will be populated by subdirectories named after your input
-    error_log_file = icesat2_dir + 'ICESat2_Log_File.txt'
-    landmask_c_file = '/home/eheijkoop/Scripts/C_Code/pnpoly_function.c' #file with C function pnpoly, "point in polygon", to perform landmask
-    landmask_inside_flag = 1 #flag to find points inside (1) or outside (0) polygon
 
-    user = 'EHeijkoop' #Your NASA EarthData username
+    input_file = config.get('GCP_PATHS','input_file') #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
+    osm_shp_path = config.get('GENERAL_PATHS','osm_shp_path') #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
+    icesat2_dir = config.get('GCP_PATHS','icesat2_dir') #output directory, which will be populated by subdirectories named after your input
+    error_log_file = config.get('GCP_PATHS','error_log_file') #file to write errors to
+    landmask_c_file = config.get('GENERAL_PATHS','landmask_c_file') #file with C function pnpoly, "point in polygon", to perform landmask
+    landmask_inside_flag = config.getint('GCP_CONSTANTS','landmask_inside_flag') #flag to find points inside (1) or outside (0) polygon
+
+    user = config.get('GENERAL','user') #Your NASA EarthData username
     token = get_token(user) #Create NSIDC token to download ICESat-2
     if SRTM_toggle:
         pw = getpass.getpass() #Your NASA EarthData password
-        SRTM_threshold = 10 #set your SRTM threshold here
-        EGM96_path = '/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/EGM96_180.tif' #supplied on github
+        SRTM_threshold = config.getfloat('GCP_CONSTANTS','SRTM_Threshold') #set your SRTM threshold here
+        EGM96_path = config.get('GCP_PATHS','EGM96_path') #supplied on github
     if not os.path.isdir(icesat2_dir):
         os.mkdir(icesat2_dir)
 

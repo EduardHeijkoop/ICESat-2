@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import datetime
+import configparser
 
 from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2,analyze_icesat2_ocean
 from icesat2_utils import gps2utc,landmask_icesat2,DTU21_filter_icesat2
@@ -20,11 +21,15 @@ from icesat2_utils import gps2utc,landmask_icesat2,DTU21_filter_icesat2
 
 
 def main():
-    DTU21_toggle = True
-    landmask_toggle = True
-    timestamp_toggle = True
-    geophys_corr_toggle = True
-    ocean_tide_replacement_toggle = True
+    config_file = 'icesat2_config.ini'
+    config = configparser.ConfigParser()
+    config.read(config_file)
+
+    DTU21_toggle = config.getboolean('OCEAN_CONSTANTS','DTU21_toggle')
+    landmask_toggle = config.getboolean('OCEAN_CONSTANTS','landmask_toggle')
+    timestamp_toggle = config.getboolean('OCEAN_CONSTANTS','timestamp_toggle')
+    geophys_corr_toggle = config.getboolean('OCEAN_CONSTANTS','geophys_corr_toggle')
+    ocean_tide_replacement_toggle = config.getboolean('OCEAN_CONSTANTS','ocean_tide_replacement_toggle')
     on_off_str = ('off','on')
 
     print('Current settings:')
@@ -34,18 +39,18 @@ def main():
     print(f'Geophysical corrections : {on_off_str[geophys_corr_toggle]}')
     print(f'Ocean tide replacement  : {on_off_str[ocean_tide_replacement_toggle]}')
 
-    input_file = '/home/eheijkoop/INPUTS/OCEAN_Input.txt' #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
-    osm_shp_path = '/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/Coast/land-polygons-complete-4326/land_polygons.shp' #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
-    icesat2_dir = '/BhaltosMount/Bhaltos/EDUARD/Projects/Sea_Level/ICESat-2/' #output directory, which will be populated by subdirectories named after your input
-    error_log_file = icesat2_dir + 'ICESat2_Log_File.txt'
-    landmask_c_file = '/home/eheijkoop/Scripts/C_Code/pnpoly_function.c' #file with C function pnpoly, "point in polygon", to perform landmask
-    landmask_inside_flag = 0 #flag to find points inside (1 for land) or outside (0 for water) polygon
+    input_file = config.get('OCEAN_PATHS','input_file') #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
+    osm_shp_path = config.get('GENERAL_PATHS','osm_shp_path') #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
+    icesat2_dir = config.get('OCEAN_PATHS','icesat2_dir') #output directory, which will be populated by subdirectories named after your input
+    error_log_file = config.get('OCEAN_PATHS','error_log_file') #file to write errors to
+    landmask_c_file = config.get('GENERAL_PATHS','landmask_c_file') #file with C function pnpoly, "point in polygon", to perform landmask
+    landmask_inside_flag = config.getint('OCEAN_CONSTANTS','landmask_inside_flag') #flag to find points inside (1 for land) or outside (0 for water) polygon
 
-    user = 'EHeijkoop' #Your NASA EarthData username
+    user = config.get('GENERAL','user') #Your NASA EarthData username
     token = get_token(user) #Create NSIDC token to download ICESat-2
     if DTU21_toggle == True:
-        DTU21_threshold = 10
-        DTU21_path = '/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/DTU21/DTU21MSS_WGS84_lon180.tif'
+        DTU21_threshold = config.getfloat('OCEAN_CONSTANTS','DTU21_threshold')
+        DTU21_path = config.get('OCEAN_PATHS','DTU21_path') #path to DTU21 file
 
     if not os.path.isdir(icesat2_dir):
         os.mkdir(icesat2_dir)
