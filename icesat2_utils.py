@@ -13,18 +13,6 @@ import socket
 import xml.etree.ElementTree as ET
 import shapely
 
-import pyTMD.time
-import pyTMD.model
-from pyTMD.calc_delta_time import calc_delta_time
-from pyTMD.infer_minor_corrections import infer_minor_corrections
-from pyTMD.predict_tidal_ts import predict_tidal_ts
-from pyTMD.read_tide_model import extract_tidal_constants
-from pyTMD.read_netcdf_model import extract_netcdf_constants
-from pyTMD.read_GOT_model import extract_GOT_constants
-from pyTMD.read_FES_model import extract_FES_constants
-from pyTMD.spatial import wrap_longitudes
-
-
 
 
 
@@ -282,7 +270,7 @@ def download_icesat2(df_city,token,error_log_file):
     else:
         return None
 
-def analyze_icesat2_ocean(icesat2_dir,df_city,geophys_corr_toggle=True,ocean_tide_replacement_toggle=False):
+def analyze_icesat2_ocean(icesat2_dir,df_city,config,geophys_corr_toggle=True,ocean_tide_replacement_toggle=False):
     #Given a directory of downloaded ATL03 hdf5 files,
     #reads them and writes the high confidence photons to a CSV as:
     #longitude,latitude,height (WGS84),time [UTC]
@@ -377,7 +365,7 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,geophys_corr_toggle=True,ocean_tid
                         tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = np.nan
                 else:
                     tmp_utc_time_geophys_corr = gps2utc(tmp_delta_time_total_geophys_corr)
-                    fes2014_heights = ocean_tide_replacement(tmp_lon_ref,tmp_lat_ref,tmp_utc_time_geophys_corr)
+                    fes2014_heights = ocean_tide_replacement(tmp_lon_ref,tmp_lat_ref,tmp_utc_time_geophys_corr,config)
                     idx_no_fes_tides = np.isnan(fes2014_heights)
                     for i in np.atleast_1d(np.argwhere(idx_no_fes_tides==False).squeeze()):
                         tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes2014_heights[i] + tmp_dac[i])
@@ -477,9 +465,11 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data):
     return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf
 
 def landmask_icesat2(lon,lat,lon_coast,lat_coast,landmask_c_file,inside_flag):
-    #Given lon/lat of points, and lon/lat of coast (or any other boundary),
-    #finds points inside the polygon. Boundary must be in the form of separate lon and lat arrays,
-    #with polygons separated by NaNs
+    '''
+    Given lon/lat of points, and lon/lat of coast (or any other boundary),
+    finds points inside the polygon. Boundary must be in the form of separate lon and lat arrays,
+    with polygons separated by NaNs
+    '''
     print('Running landmask...')
     t_start = datetime.datetime.now()
     c_float_p = c.POINTER(c.c_float)
@@ -517,47 +507,6 @@ def DTU21_filter_icesat2(h_unfiltered,icesat2_file,icesat2_dir,df_city,DTU21_thr
     subprocess.run('rm ' + DTU21_sampled_file,shell=True)
     return DTU21_cond
 
-def ocean_tide_replacement(lon,lat,utc_time):
-    #Given a set of lon,lat and utc time, computes FES2014 tidal elevations
-    #pyTMD boilerplate
-    delta_file = pyTMD.utilities.get_data_path(['data','merged_deltat.data'])
-    model_dir = '/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/Ocean_Tides/FES2014/'
-    model = pyTMD.model(model_dir,format='netcdf',compressed=False).elevation('FES2014')
-    constituents = model.constituents
-    
-    time_datetime = np.asarray(list(map(datetime.datetime.fromisoformat,utc_time)))
-    unique_date_list = np.unique([a.date() for a in time_datetime])
-    tide_heights = np.empty(len(lon),dtype=np.float32)
-    for unique_date in unique_date_list:
-        idx_unique_date = np.asarray([a.date() == unique_date for a in time_datetime])
-        time_unique_date = time_datetime[idx_unique_date]
-        lon_unique_date = lon[idx_unique_date]
-        lat_unique_date = lat[idx_unique_date]
-        YMD = time_unique_date[0].date()
-        unique_seconds = np.unique(np.asarray([a.hour*3600+a.minute*60+a.second for a in time_unique_date]))
-        seconds = np.arange(np.min(unique_seconds),np.max(unique_seconds)+2)
-        seconds_since_midnight = [a.hour*3600 + a.minute*60 + a.second + a.microsecond/1000000 for a in time_unique_date]
-        idx_time = np.asarray([np.argmin(abs(t - seconds)) for t in seconds_since_midnight])
-        tide_time = pyTMD.time.convert_calendar_dates(YMD.year,YMD.month,YMD.day,second=seconds)
-        amp,ph = extract_FES_constants(np.atleast_1d(lon_unique_date),
-                np.atleast_1d(lat_unique_date), model.model_file, TYPE=model.type,
-                VERSION=model.version, METHOD='spline', EXTRAPOLATE=True,
-                CUTOFF=5.0,SCALE=model.scale, GZIP=model.compressed)
-        DELTAT = calc_delta_time(delta_file, tide_time)
-        cph = -1j*ph*np.pi/180.0
-        hc = amp*np.exp(cph)
-        tmp_tide_heights = np.empty(len(lon_unique_date))
-        for i in range(len(lon_unique_date)):
-            if np.any(amp[i].mask) == True:
-                tmp_tide_heights[i] = np.nan
-            else:
-                TIDE =         predict_tidal_ts(np.atleast_1d(tide_time[idx_time[i]]),np.ma.array(data=[hc.data[i]],mask=[hc.mask[i]]),constituents,DELTAT=DELTAT[idx_time[i]],CORRECTIONS=model.format)
-                MINOR = infer_minor_corrections(np.atleast_1d(tide_time[idx_time[i]]),np.ma.array(data=[hc.data[i]],mask=[hc.mask[i]]),constituents,DELTAT=DELTAT[idx_time[i]],CORRECTIONS=model.format)
-                TIDE.data[:] += MINOR.data[:]
-                tmp_tide_heights[i] = TIDE.data
-        tide_heights[idx_unique_date] = tmp_tide_heights
-            
-    return tide_heights
 
 def SRTM_filter_icesat2(lon,lat,h,icesat2_file,icesat2_dir,df_city,user,pw,SRTM_threshold,EGM96_path):
     #Given lon/lat/h, downloads SRTM 1x1 deg tiles, merges tiles together and changes from referencing EGM96 to WGS84 ellipsoid.
