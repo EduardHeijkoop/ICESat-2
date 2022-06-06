@@ -4,6 +4,7 @@ import pandas as pd
 import datetime
 import getpass
 import configparser
+import warnings
 
 from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2,analyze_icesat2_land
 from icesat2_utils import gps2utc,landmask_icesat2,SRTM_filter_icesat2
@@ -22,6 +23,7 @@ from icesat2_utils import gps2utc,landmask_icesat2,SRTM_filter_icesat2
 
 
 def main():
+    warnings.simplefilter(action='ignore')
     config_file = 'icesat2_config.ini'
     config = configparser.ConfigParser()
     config.read(config_file)
