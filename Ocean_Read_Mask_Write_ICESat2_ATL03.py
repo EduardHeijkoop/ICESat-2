@@ -5,9 +5,9 @@ import datetime
 import configparser
 import warnings
 
-from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2,analyze_icesat2_ocean
+from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2
 from icesat2_utils import gps2utc,landmask_icesat2,DTU21_filter_icesat2
-from pytmd_utils import ocean_tide_replacement
+from ocean_utils import analyze_icesat2_ocean
 
 ###Written by Eduard Heijkoop, University of Colorado###
 ###Eduard.Heijkoop@colorado.edu###

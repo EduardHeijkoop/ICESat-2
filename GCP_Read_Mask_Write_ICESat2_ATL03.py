@@ -6,8 +6,9 @@ import getpass
 import configparser
 import warnings
 
-from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2,analyze_icesat2_land
+from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2
 from icesat2_utils import gps2utc,landmask_icesat2,SRTM_filter_icesat2
+from gcp_utils import analyze_icesat2_land
 
 ###Written by Eduard Heijkoop, University of Colorado###
 ###Eduard.Heijkoop@colorado.edu###
