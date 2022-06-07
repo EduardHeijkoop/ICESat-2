@@ -92,7 +92,7 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],geophys_corr_toggle,ocean_tide_replacement_toggle)
+        lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],config,geophys_corr_toggle,ocean_tide_replacement_toggle)
         if len(lon_high_med_conf) == 0:
             continue
         utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
