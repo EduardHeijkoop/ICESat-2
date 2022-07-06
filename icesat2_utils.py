@@ -55,6 +55,21 @@ def get_lonlat_shp(shp_path):
             lat_coast = np.append(lat_coast,np.nan)
     return lon_coast, lat_coast
 
+def great_circle_distance(lon1,lat1,lon2,lat2,R=6378137.0):
+    lon1 = deg2rad(lon1)
+    lat1 = deg2rad(lat1)
+    lon2 = deg2rad(lon2)
+    lat2 = deg2rad(lat2)
+    DL = np.abs(lon2 - lon1)
+    DP = np.abs(lat2 - lat1)
+    dsigma = 2*np.arcsin( np.sqrt( np.sin(0.5*DP)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(0.5*DL)**2))
+    distance = R*dsigma
+    return distance
+
+def deg2rad(deg):
+    rad = deg*np.math.pi/180
+    return rad
+
 def gps2utc(gps_time):
     '''
     Converts GPS time that ICESat-2 references to UTC

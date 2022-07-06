@@ -33,6 +33,7 @@ def main():
     timestamp_toggle = config.getboolean('OCEAN_CONSTANTS','timestamp_toggle')
     geophys_corr_toggle = config.getboolean('OCEAN_CONSTANTS','geophys_corr_toggle')
     ocean_tide_replacement_toggle = config.getboolean('OCEAN_CONSTANTS','ocean_tide_replacement_toggle')
+    clustering_toggle = config.getboolean('OCEAN_CONSTANTS','clustering_toggle')
     on_off_str = ('off','on')
 
     print('Current settings:')
@@ -41,6 +42,7 @@ def main():
     print(f'Timestamps              : {on_off_str[timestamp_toggle]}')
     print(f'Geophysical corrections : {on_off_str[geophys_corr_toggle]}')
     print(f'Ocean tide replacement  : {on_off_str[ocean_tide_replacement_toggle]}')
+    print(f'Clustering              : {on_off_str[clustering_toggle]}')
 
     input_file = config.get('OCEAN_PATHS','input_file') #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
     osm_shp_path = config.get('GENERAL_PATHS','osm_shp_path') #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
@@ -48,6 +50,7 @@ def main():
     error_log_file = config.get('OCEAN_PATHS','error_log_file') #file to write errors to
     landmask_c_file = config.get('GENERAL_PATHS','landmask_c_file') #file with C function pnpoly, "point in polygon", to perform landmask
     landmask_inside_flag = config.getint('OCEAN_CONSTANTS','landmask_inside_flag') #flag to find points inside (1 for land) or outside (0 for water) polygon
+    model_dir = config.get('OCEAN_PATHS','model_dir')
 
     user = config.get('GENERAL','user') #Your NASA EarthData username
     token = get_token(user) #Create NSIDC token to download ICESat-2
@@ -92,7 +95,7 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],config,geophys_corr_toggle,ocean_tide_replacement_toggle)
+        lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],model_dir,geophys_corr_toggle,ocean_tide_replacement_toggle)
         if len(lon_high_med_conf) == 0:
             continue
         utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)

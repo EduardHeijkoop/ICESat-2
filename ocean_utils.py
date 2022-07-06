@@ -1,7 +1,11 @@
 import numpy as np
 import datetime
 import h5py
-from icesat2_utils import gps2utc
+from icesat2_utils import gps2utc,great_circle_distance
+import scipy
+
+from sklearn.cluster import DBSCAN
+from sklearn.preprocessing import StandardScaler
 
 import pyTMD.time
 import pyTMD.model
@@ -10,7 +14,10 @@ from pyTMD.infer_minor_corrections import infer_minor_corrections
 from pyTMD.predict_tidal_ts import predict_tidal_ts
 from pyTMD.read_FES_model import extract_FES_constants
 
-def analyze_icesat2_ocean(icesat2_dir,df_city,config,geophys_corr_toggle=True,ocean_tide_replacement_toggle=False):
+
+total_seconds = np.vectorize(datetime.timedelta.total_seconds)
+
+def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True,ocean_tide_replacement_toggle=False):
     #Given a directory of downloaded ATL03 hdf5 files,
     #reads them and writes the high confidence photons to a CSV as:
     #longitude,latitude,height (WGS84),time [UTC]
@@ -32,8 +39,7 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,config,geophys_corr_toggle=True,oc
         full_file = icesat2_dir + city_name + '/' + h5_file
         atl03_file = h5py.File(full_file,'r')
         list(atl03_file.keys())
-        sc_orient = atl03_file['/orbit_info/sc_orient']
-        sc_orient = sc_orient[0]
+        sc_orient = atl03_file['/orbit_info/sc_orient'][0]
         #Select strong beams according to S/C orientation
         if sc_orient == 1:
             beam_list_req = beam_list_r
@@ -105,12 +111,18 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,config,geophys_corr_toggle=True,oc
                         tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = np.nan
                 else:
                     tmp_utc_time_geophys_corr = gps2utc(tmp_delta_time_total_geophys_corr)
-                    fes2014_heights = ocean_tide_replacement(tmp_lon_ref,tmp_lat_ref,tmp_utc_time_geophys_corr,config)
+                    fes2014_heights = ocean_tide_replacement(tmp_lon_ref,tmp_lat_ref,tmp_utc_time_geophys_corr,model_dir)
                     idx_no_fes_tides = np.isnan(fes2014_heights)
-                    for i in np.atleast_1d(np.argwhere(idx_no_fes_tides==False).squeeze()):
-                        tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes2014_heights[i] + tmp_dac[i])
-                    for i in np.atleast_1d(np.argwhere(idx_no_fes_tides).squeeze()):
-                        tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = np.nan
+                    dist_ref_ph = great_circle_distance(tmp_lon_ref,tmp_lat_ref,tmp_lon_ref[0],tmp_lat_ref[0])
+                    interp_func = scipy.interpolate.interp1d(dist_ref_ph[~idx_no_fes_tides],fes2014_heights[~idx_no_fes_tides],kind='cubic',fill_value='extrapolate')
+                    fes_interp = interp_func(dist_ref_ph)
+                    for i in range(len(tmp_h)):
+                        tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes_interp[i] + tmp_dac[i])
+
+                    # for i in np.atleast_1d(np.argwhere(idx_no_fes_tides==False).squeeze()):
+                    #     tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes2014_heights[i] + tmp_dac[i])
+                    # for i in np.atleast_1d(np.argwhere(idx_no_fes_tides).squeeze()):
+                    #     tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = np.nan
 
             tmp_lon_high_med_conf = tmp_lon[tmp_high_med_conf]
             tmp_lat_high_med_conf = tmp_lat[tmp_high_med_conf]
@@ -131,11 +143,11 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,config,geophys_corr_toggle=True,oc
 
     return lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf
 
-def ocean_tide_replacement(lon,lat,utc_time,config):
+def ocean_tide_replacement(lon,lat,utc_time,model_dir):
+    '''
     #Given a set of lon,lat and utc time, computes FES2014 tidal elevations
-    #pyTMD boilerplate
+    '''
     delta_file = pyTMD.utilities.get_data_path(['data','merged_deltat.data'])
-    model_dir = config.get('OCEAN_PATHS','model_dir')
     model = pyTMD.model(model_dir,format='netcdf',compressed=False).elevation('FES2014')
     constituents = model.constituents
     time_datetime = np.asarray(list(map(datetime.datetime.fromisoformat,utc_time)))
@@ -154,8 +166,8 @@ def ocean_tide_replacement(lon,lat,utc_time,config):
         tide_time = pyTMD.time.convert_calendar_dates(YMD.year,YMD.month,YMD.day,second=seconds)
         amp,ph = extract_FES_constants(np.atleast_1d(lon_unique_date),
                 np.atleast_1d(lat_unique_date), model.model_file, TYPE=model.type,
-                VERSION=model.version, METHOD='spline', EXTRAPOLATE=True,
-                CUTOFF=5.0,SCALE=model.scale, GZIP=model.compressed)
+                VERSION=model.version, METHOD='spline', EXTRAPOLATE=False,
+                SCALE=model.scale, GZIP=model.compressed)
         DELTAT = calc_delta_time(delta_file, tide_time)
         cph = -1j*ph*np.pi/180.0
         hc = amp*np.exp(cph)
@@ -170,3 +182,4 @@ def ocean_tide_replacement(lon,lat,utc_time,config):
                 tmp_tide_heights[i] = TIDE.data
         tide_heights[idx_unique_date] = tmp_tide_heights
     return tide_heights
+
