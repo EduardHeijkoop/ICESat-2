@@ -38,7 +38,7 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
     for h5_file in file_list:
         full_file = icesat2_dir + city_name + '/' + h5_file
         atl03_file = h5py.File(full_file,'r')
-        list(atl03_file.keys())
+        #list(atl03_file.keys())
         sc_orient = atl03_file['/orbit_info/sc_orient'][0]
         #Select strong beams according to S/C orientation
         if sc_orient == 1:
@@ -116,7 +116,7 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
                     dist_ref_ph = great_circle_distance(tmp_lon_ref,tmp_lat_ref,tmp_lon_ref[0],tmp_lat_ref[0])
                     interp_func = scipy.interpolate.interp1d(dist_ref_ph[~idx_no_fes_tides],fes2014_heights[~idx_no_fes_tides],kind='cubic',fill_value='extrapolate')
                     fes_interp = interp_func(dist_ref_ph)
-                    for i in range(len(tmp_h)):
+                    for i in range(len(tmp_ref_ph_index)):
                         tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes_interp[i] + tmp_dac[i])
 
                     # for i in np.atleast_1d(np.argwhere(idx_no_fes_tides==False).squeeze()):

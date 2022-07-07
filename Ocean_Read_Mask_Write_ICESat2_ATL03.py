@@ -56,6 +56,7 @@ def main():
     token = get_token(user) #Create NSIDC token to download ICESat-2
     if DTU21_toggle == True:
         DTU21_threshold = config.getfloat('OCEAN_CONSTANTS','DTU21_threshold')
+        DTU21_threshold_str = str(DTU21_threshold).replace('.','p')
         DTU21_path = config.get('OCEAN_PATHS','DTU21_path') #path to DTU21 file
 
     if not os.path.isdir(icesat2_dir):
@@ -106,9 +107,9 @@ def main():
             h_high_med_conf = h_high_med_conf[landmask]
             delta_time_total_high_med_conf = delta_time_total_high_med_conf[landmask]
             utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
-            icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_masked.txt'
+            icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf_masked.txt'
         else:
-            icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf.txt'
+            icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf.txt'
         if geophys_corr_toggle == False:
             icesat2_file = icesat2_file.replace('ATL03','UNCORRECTED_ATL03')
         if ocean_tide_replacement_toggle == True:
@@ -127,9 +128,9 @@ def main():
             delta_time_total_high_med_conf_DTU21 = delta_time_total_high_med_conf[DTU21_cond]
             utc_time_high_med_conf_DTU21 = gps2utc(delta_time_total_high_med_conf_DTU21)
             if landmask_toggle == True:
-                icesat2_dtu21_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_masked_DTU21_filtered_threshold_' + str(DTU21_threshold) + '_m.txt'
+                icesat2_dtu21_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf_masked_DTU21_filtered_threshold_{DTU21_threshold_str}_m.txt'
             else:
-                icesat2_dtu21_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_med_conf_DTU21_filtered_threshold_' + str(DTU21_threshold) + '_m.txt'
+                icesat2_dtu21_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf_DTU21_filtered_threshold_{DTU21_threshold_str}_m.txt'
             if geophys_corr_toggle == False:
                 icesat2_dtu21_file = icesat2_dtu21_file.replace('ATL03','UNCORRECTED_ATL03')
             if ocean_tide_replacement_toggle == True:
