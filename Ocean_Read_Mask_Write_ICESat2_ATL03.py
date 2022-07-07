@@ -116,9 +116,9 @@ def main():
             icesat2_file = icesat2_file.replace('_ATL03','_ATL03_FES2014')
         
         if timestamp_toggle == True:
-            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf,utc_time_high_med_conf.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
+            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf,utc_time_high_med_conf.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
         else:
-            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
+            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf],fmt='%11.6f,%11.6f,%11.6f',delimiter=',')
         
         if DTU21_toggle == True:
             DTU21_cond = DTU21_filter_icesat2(h_high_med_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],DTU21_threshold,DTU21_path)
@@ -136,9 +136,9 @@ def main():
             if ocean_tide_replacement_toggle == True:
                 icesat2_dtu21_file = icesat2_dtu21_file.replace('_ATL03','_ATL03_FES2014')
             if timestamp_toggle == True:
-                np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21,utc_time_high_med_conf_DTU21.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
+                np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21,utc_time_high_med_conf_DTU21.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
             else:
-                np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
+                np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21],fmt='%11.6f,%11.6f,%11.6f',delimiter=',')
         print('Done with '+city_name+' at '+datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
         print(' ')
 
