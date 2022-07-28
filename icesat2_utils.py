@@ -206,7 +206,7 @@ def cat_str_API(beam):
     '''
     beam_command = '/gt'+beam+'/heights/h_ph,/gt'+beam+'/heights/lon_ph,/gt'+beam+'/heights/lat_ph,/gt'+beam+'/heights/delta_time,/gt'+beam+'/heights/signal_conf_ph,' \
         '/gt'+beam+'/geolocation/reference_photon_lon,/gt'+beam+'/geolocation/reference_photon_lat,/gt'+beam+'/geolocation/ph_index_beg,/gt'+beam+'/geolocation/segment_ph_cnt,/gt'+beam+'/geolocation/reference_photon_index,' \
-                '/gt'+beam+'/geolocation/sigma_h,/gt'+beam+'/geolocation/sigma_lon,/gt'+beam+'/geolocation/sigma_lat,' \
+        '/gt'+beam+'/geolocation/sigma_h,/gt'+beam+'/geolocation/sigma_lon,/gt'+beam+'/geolocation/sigma_lat,/gt'+beam+'/geolocation/podppd_flag,' \
         '/gt'+beam+'/geophys_corr/delta_time,/gt'+beam+'/geophys_corr/tide_ocean,/gt'+beam+'/geophys_corr/dac,/gt'+beam+'/geophys_corr/tide_equilibrium,'
     return beam_command
 

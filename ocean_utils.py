@@ -79,6 +79,7 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
             tmp_ocean_tide = np.asarray(atl03_file['/'+beam+'/geophys_corr/tide_ocean']).squeeze()
             tmp_dac = np.asarray(atl03_file['/'+beam+'/geophys_corr/dac']).squeeze()
             tmp_eq_tide = np.asarray(atl03_file['/'+beam+'/geophys_corr/tide_equilibrium']).squeeze()
+            tmp_podppd_flag = np.asarray(atl03_file['/'+beam+'/geolocation/podppd_flag']).squeeze()
             #no valid photons to "create" a ref photon -> revert back to reference ground track, which we don't want, so select segments with >0 photons
             idx_ref_ph = tmp_segment_ph_cnt>0
 
@@ -92,6 +93,11 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
             tmp_ocean_tide = tmp_ocean_tide[idx_ref_ph]
             tmp_dac = tmp_dac[idx_ref_ph]
             tmp_eq_tide = tmp_eq_tide[idx_ref_ph]
+            tmp_podppd_flag = tmp_podppd_flag[idx_ref_ph]
+            tmp_podppd_flag_full_ph = np.zeros(tmp_lon.shape)
+            for i in range(len(tmp_ph_index_beg)):
+                tmp_podppd_flag_full_ph[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = tmp_podppd_flag[i]
+            tmp_idx_podppd = tmp_podppd_flag_full_ph == 0
 
 
             if geophys_corr_toggle == True:
@@ -117,24 +123,20 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
                     interp_func = scipy.interpolate.interp1d(dist_ref_ph[~idx_no_fes_tides],fes2014_heights[~idx_no_fes_tides],kind='cubic',fill_value='extrapolate')
                     fes_interp = interp_func(dist_ref_ph)
                     for i in range(len(tmp_ref_ph_index)):
-                        tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes_interp[i] + tmp_dac[i])
+                        tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes_interp[i] + tmp_dac[i] + tmp_eq_tide[i])
 
                     # for i in np.atleast_1d(np.argwhere(idx_no_fes_tides==False).squeeze()):
                     #     tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes2014_heights[i] + tmp_dac[i])
                     # for i in np.atleast_1d(np.argwhere(idx_no_fes_tides).squeeze()):
                     #     tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = np.nan
 
-            tmp_lon_high_med_conf = tmp_lon[tmp_high_med_conf]
-            tmp_lat_high_med_conf = tmp_lat[tmp_high_med_conf]
-            tmp_h_high_med_conf = tmp_h[tmp_high_med_conf]
-            tmp_delta_time_total_high_med_conf = tmp_delta_time_total[tmp_high_med_conf]
-
             idx_nan = np.isnan(tmp_h_high_med_conf)
+            idx_flags = np.all((tmp_high_med_conf,tmp_idx_podppd,~idx_nan),axis=0)
 
-            tmp_lon_high_med_conf = tmp_lon_high_med_conf[~idx_nan]
-            tmp_lat_high_med_conf = tmp_lat_high_med_conf[~idx_nan]
-            tmp_h_high_med_conf = tmp_h_high_med_conf[~idx_nan]
-            tmp_delta_time_total_high_med_conf = tmp_delta_time_total_high_med_conf[~idx_nan]
+            tmp_lon_high_med_conf = tmp_lon[idx_flags]
+            tmp_lat_high_med_conf = tmp_lat[idx_flags]
+            tmp_h_high_med_conf = tmp_h[idx_flags]
+            tmp_delta_time_total_high_med_conf = tmp_delta_time_total[idx_flags]
 
             lon_high_med_conf = np.append(lon_high_med_conf,tmp_lon_high_med_conf)
             lat_high_med_conf = np.append(lat_high_med_conf,tmp_lat_high_med_conf)
@@ -183,3 +185,12 @@ def ocean_tide_replacement(lon,lat,utc_time,model_dir):
         tide_heights[idx_unique_date] = tmp_tide_heights
     return tide_heights
 
+def cluster_photon_cloud(lon,lat,time,height,clustering_method='DBSCAN'):
+    '''
+    Clusters photon cloud with either DBSCAN or 3sigma along-track
+    '''
+    if clustering_method == 'DBSCAN':
+        
+        return None
+    elif clustering_method == '3sigma':
+        return None

@@ -14,9 +14,9 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data):
     beam_list_r = ['gt1r','gt2r','gt3r']
     beam_list_l = ['gt1l','gt2l','gt3l']
     #Initialize arrays and start reading .h5 files
-    lon = np.empty([0,1],dtype=float)
-    lat = np.empty([0,1],dtype=float)
-    h = np.empty([0,1],dtype=float)
+    # lon = np.empty([0,1],dtype=float)
+    # lat = np.empty([0,1],dtype=float)
+    # h = np.empty([0,1],dtype=float)
     lon_high_conf = np.empty([0,1],dtype=float)
     lat_high_conf = np.empty([0,1],dtype=float)
     h_high_conf = np.empty([0,1],dtype=float)
@@ -52,13 +52,31 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data):
             #If fewer than 100 high confidence photons are in an hdf5 file, skip
             if len(tmp_high_conf) < 100:
                 continue
-            tmp_lon_high_conf = tmp_lon[tmp_high_conf]
-            tmp_lat_high_conf = tmp_lat[tmp_high_conf]
-            tmp_h_high_conf = tmp_h[tmp_high_conf]
-            tmp_delta_time_total_high_conf = tmp_delta_time_total[tmp_high_conf]
-            lon = np.append(lon,tmp_lon)
-            lat = np.append(lat,tmp_lat)
-            h = np.append(h,tmp_h)
+            tmp_ph_index_beg = np.asarray(atl03_file['/'+beam+'/geolocation/ph_index_beg']).squeeze()
+            tmp_ph_index_beg = tmp_ph_index_beg - 1
+            tmp_segment_ph_cnt = np.asarray(atl03_file['/'+beam+'/geolocation/segment_ph_cnt']).squeeze()
+            tmp_ref_ph_index = np.asarray(atl03_file['/'+beam+'/geolocation/reference_photon_index']).squeeze()
+            tmp_ph_index_end = tmp_ph_index_beg + tmp_segment_ph_cnt
+            tmp_podppd_flag = np.asarray(atl03_file['/'+beam+'/geolocation/podppd_flag']).squeeze()
+            #no valid photons to "create" a ref photon -> revert back to reference ground track, which we don't want, so select segments with >0 photons
+            idx_ref_ph = tmp_segment_ph_cnt>0
+            tmp_ph_index_beg = tmp_ph_index_beg[idx_ref_ph]
+            tmp_ph_index_end = tmp_ph_index_end[idx_ref_ph]
+            tmp_segment_ph_cnt = tmp_segment_ph_cnt[idx_ref_ph]
+            tmp_ref_ph_index = tmp_ref_ph_index[idx_ref_ph]
+            tmp_podppd_flag = tmp_podppd_flag[idx_ref_ph]
+            tmp_podppd_flag_full_ph = np.zeros(tmp_lon.shape)
+            for i in range(len(tmp_ph_index_beg)):
+                tmp_podppd_flag_full_ph[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = tmp_podppd_flag[i]
+            tmp_idx_podppd = tmp_podppd_flag_full_ph == 0
+
+            idx_nan = np.isnan(tmp_h)
+            idx_flags = np.all((tmp_high_conf,tmp_idx_podppd,~idx_nan),axis=0)
+
+            tmp_lon_high_conf = tmp_lon[idx_flags]
+            tmp_lat_high_conf = tmp_lat[idx_flags]
+            tmp_h_high_conf = tmp_h[idx_flags]
+            tmp_delta_time_total_high_conf = tmp_delta_time_total[idx_flags]
             lon_high_conf = np.append(lon_high_conf,tmp_lon_high_conf)
             lat_high_conf = np.append(lat_high_conf,tmp_lat_high_conf)
             h_high_conf = np.append(h_high_conf,tmp_h_high_conf)
