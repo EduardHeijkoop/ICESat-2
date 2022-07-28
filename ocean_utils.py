@@ -130,7 +130,7 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
                     # for i in np.atleast_1d(np.argwhere(idx_no_fes_tides).squeeze()):
                     #     tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = np.nan
 
-            idx_nan = np.isnan(tmp_h_high_med_conf)
+            idx_nan = np.isnan(tmp_h)
             idx_flags = np.all((tmp_high_med_conf,tmp_idx_podppd,~idx_nan),axis=0)
 
             tmp_lon_high_med_conf = tmp_lon[idx_flags]
