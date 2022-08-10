@@ -17,7 +17,7 @@ from pyTMD.read_FES_model import extract_FES_constants
 
 total_seconds = np.vectorize(datetime.timedelta.total_seconds)
 
-def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True,ocean_tide_replacement_toggle=False):
+def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True,ocean_tide_replacement_toggle=False,extrapolate_fes2014=True):
     #Given a directory of downloaded ATL03 hdf5 files,
     #reads them and writes the high confidence photons to a CSV as:
     #longitude,latitude,height (WGS84),time [UTC]
@@ -119,11 +119,16 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
                     tmp_utc_time_geophys_corr = gps2utc(tmp_delta_time_total_geophys_corr)
                     fes2014_heights = ocean_tide_replacement(tmp_lon_ref,tmp_lat_ref,tmp_utc_time_geophys_corr,model_dir)
                     idx_no_fes_tides = np.isnan(fes2014_heights)
+                    if np.sum(~idx_no_fes_tides) < 100:
+                        continue
                     dist_ref_ph = great_circle_distance(tmp_lon_ref,tmp_lat_ref,tmp_lon_ref[0],tmp_lat_ref[0])
-                    interp_func = scipy.interpolate.interp1d(dist_ref_ph[~idx_no_fes_tides],fes2014_heights[~idx_no_fes_tides],kind='cubic',fill_value='extrapolate')
+                    if extrapolate_fes2014 == True:
+                        interp_func = scipy.interpolate.interp1d(dist_ref_ph[~idx_no_fes_tides],fes2014_heights[~idx_no_fes_tides],kind='cubic',fill_value='extrapolate')
+                    else:
+                        interp_func = scipy.interpolate.interp1d(dist_ref_ph[~idx_no_fes_tides],fes2014_heights[~idx_no_fes_tides],kind='cubic')
                     fes_interp = interp_func(dist_ref_ph)
                     for i in range(len(tmp_ref_ph_index)):
-                        tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes_interp[i] + tmp_dac[i] + tmp_eq_tide[i])
+                        tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes_interp[i] + tmp_dac[i])
 
                     # for i in np.atleast_1d(np.argwhere(idx_no_fes_tides==False).squeeze()):
                     #     tmp_h[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] -= (fes2014_heights[i] + tmp_dac[i])
