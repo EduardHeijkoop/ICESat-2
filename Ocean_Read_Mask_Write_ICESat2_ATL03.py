@@ -139,7 +139,7 @@ def main():
                 np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21,utc_time_high_med_conf_DTU21.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
             else:
                 np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21],fmt='%11.6f,%11.6f,%11.6f',delimiter=',')
-        print('Done with '+city_name+' at '+datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        print(f'Done with {city_name} at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         print(' ')
 
 if __name__ == '__main__':

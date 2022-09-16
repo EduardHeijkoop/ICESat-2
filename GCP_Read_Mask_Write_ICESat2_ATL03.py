@@ -52,6 +52,7 @@ def main():
     if SRTM_toggle:
         pw = getpass.getpass() #Your NASA EarthData password
         SRTM_threshold = config.getfloat('GCP_CONSTANTS','SRTM_Threshold') #set your SRTM threshold here
+        SRTM_threshold_str = str(SRTM_threshold).replace('.','p') #replace decimal point with p for file name
         EGM96_path = config.get('GCP_PATHS','EGM96_path') #supplied on github
     if not os.path.isdir(icesat2_dir):
         os.mkdir(icesat2_dir)
@@ -101,9 +102,9 @@ def main():
             h_high_conf = h_high_conf[landmask]
             delta_time_total_high_conf = delta_time_total_high_conf[landmask]
             utc_time_high_conf = gps2utc(delta_time_total_high_conf)
-            icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_masked.txt'
+            icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked.txt'
         else:
-            icesat2_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf.txt'
+            icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf.txt'
         
         if timestamp_toggle:
             np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
@@ -118,14 +119,14 @@ def main():
             delta_time_total_high_conf_SRTM = delta_time_total_high_conf[SRTM_cond]
             utc_time_high_conf_SRTM = gps2utc(delta_time_total_high_conf_SRTM)
             if landmask_toggle:
-                icesat2_srtm_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_masked_SRTM_filtered_threshold_' + str(SRTM_threshold) + '_m.txt'
+                icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked_SRTM_filtered_threshold_{SRTM_threshold_str}_m.txt'
             else:
-                icesat2_srtm_file = icesat2_dir + city_name + '/' + city_name + '_ATL03_high_conf_SRTM_filtered_threshold_' + str(SRTM_threshold) + '_m.txt'
+                icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_SRTM_filtered_threshold_{SRTM_threshold_str}_m.txt'
             if timestamp_toggle:
                 np.savetxt(icesat2_srtm_file,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM,utc_time_high_conf_SRTM.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
             else:
                 np.savetxt(icesat2_srtm_file,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
-        print('Done with '+city_name+' at '+datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'))
+        print(f'Done with {city_name} at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         print(' ')
 
 if __name__ == '__main__':
