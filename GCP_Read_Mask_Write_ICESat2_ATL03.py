@@ -107,9 +107,9 @@ def main():
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf.txt'
         
         if timestamp_toggle:
-            np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
+            np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object)],fmt='%.6f,%.6f,%.6f,%s',delimiter=',')
         else:
-            np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
+            np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%.6f,%.6f,%.6f',delimiter=',')
         
         if SRTM_toggle:
             SRTM_cond = SRTM_filter_icesat2(lon_high_conf,lat_high_conf,h_high_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],user,pw,SRTM_threshold,EGM96_path)
@@ -123,9 +123,9 @@ def main():
             else:
                 icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_SRTM_filtered_threshold_{SRTM_threshold_str}_m.txt'
             if timestamp_toggle:
-                np.savetxt(icesat2_srtm_file,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM,utc_time_high_conf_SRTM.astype(object)],fmt='%10.5f,%10.5f,%10.5f,%s',delimiter=',')
+                np.savetxt(icesat2_srtm_file,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM,utc_time_high_conf_SRTM.astype(object)],fmt='%.6f,%.6f,%.6f,%s',delimiter=',')
             else:
-                np.savetxt(icesat2_srtm_file,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%10.5f,%10.5f,%10.5f',delimiter=',')
+                np.savetxt(icesat2_srtm_file,np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%.6f,%.6f,%.6f',delimiter=',')
         print(f'Done with {city_name} at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         print(' ')
 
