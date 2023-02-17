@@ -4,6 +4,7 @@ import pandas as pd
 import datetime
 import configparser
 import warnings
+import argparse
 
 from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2
 from icesat2_utils import gps2utc,landmask_icesat2,DTU21_filter_icesat2
@@ -27,6 +28,11 @@ def main():
     config_file = 'icesat2_config.ini'
     config = configparser.ConfigParser()
     config.read(config_file)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--machine',default='t',help='Machine to run on (t, b or local)')
+    args = parser.parse_args()
+    machine_name = args.machine
 
     DTU21_toggle = config.getboolean('OCEAN_CONSTANTS','DTU21_toggle')
     landmask_toggle = config.getboolean('OCEAN_CONSTANTS','landmask_toggle')
@@ -58,6 +64,22 @@ def main():
         DTU21_threshold = config.getfloat('OCEAN_CONSTANTS','DTU21_threshold')
         DTU21_threshold_str = str(DTU21_threshold).replace('.','p')
         DTU21_path = config.get('OCEAN_PATHS','DTU21_path') #path to DTU21 file
+
+    if machine_name == 'b':
+        osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+        icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+        error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+        if DTU21_toggle:
+            DTU21_path = DTU21_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+        
+    elif machine_name == 'local':
+        osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
+        icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/Sea_Level/','/media/heijkoop/DATA/')
+        error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/Sea_Level/','/media/heijkoop/DATA/')
+        landmask_c_file = landmask_c_file.replace('/home/eheijkoop/Scripts/','/media/heijkoop/DATA/Dropbox/TU/PhD/Github/')
+        if DTU21_toggle:
+            DTU21_path = DTU21_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
+
 
     if not os.path.isdir(icesat2_dir):
         os.mkdir(icesat2_dir)
