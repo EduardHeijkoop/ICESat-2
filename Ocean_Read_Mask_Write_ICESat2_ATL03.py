@@ -66,20 +66,19 @@ def main():
         DTU21_path = config.get('OCEAN_PATHS','DTU21_path') #path to DTU21 file
 
     if machine_name == 'b':
-        osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+        osm_shp_path = osm_shp_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         if DTU21_toggle:
             DTU21_path = DTU21_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         
     elif machine_name == 'local':
-        osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
+        osm_shp_path = osm_shp_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
         icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/Sea_Level/','/media/heijkoop/DATA/')
         error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/Sea_Level/','/media/heijkoop/DATA/')
         landmask_c_file = landmask_c_file.replace('/home/eheijkoop/Scripts/','/media/heijkoop/DATA/Dropbox/TU/PhD/Github/')
         if DTU21_toggle:
             DTU21_path = DTU21_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
-
 
     if not os.path.isdir(icesat2_dir):
         os.mkdir(icesat2_dir)
