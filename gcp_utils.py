@@ -3,7 +3,7 @@ import h5py
 from icesat2_utils import gps2utc
 
 
-def analyze_icesat2_land(icesat2_dir,df_city,shp_data):
+def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False):
     #Given a directory of downloaded ATL03 hdf5 files,
     #reads them and writes the high confidence photons to a CSV as:
     #longitude,latitude,height (WGS84),time [UTC]
@@ -21,6 +21,8 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data):
     lat_high_conf = np.empty([0,1],dtype=float)
     h_high_conf = np.empty([0,1],dtype=float)
     delta_time_total_high_conf = np.empty([0,1],dtype=float)
+    if beam_flag == True:
+        beam_high_conf = np.empty([0,1],dtype=str)
     for h5_file in file_list:
         full_file = icesat2_dir + city_name + '/' + h5_file
         atl03_file = h5py.File(full_file,'r')
@@ -81,6 +83,9 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data):
             lat_high_conf = np.append(lat_high_conf,tmp_lat_high_conf)
             h_high_conf = np.append(h_high_conf,tmp_h_high_conf)
             delta_time_total_high_conf = np.append(delta_time_total_high_conf,tmp_delta_time_total_high_conf)
+            if beam_flag == True:
+                tmp_beam_high_conf = np.repeat(beam,len(tmp_lon_high_conf))
+                beam_high_conf = np.append(beam_high_conf,tmp_beam_high_conf)
     #A lot of data will be captured off the coast that we don't want, this is a quick way of getting rid of that
     #Also prevents areas with no SRTM from being queried
     idx_lon = np.logical_or(lon_high_conf < np.min(shp_data.bounds.minx),lon_high_conf > np.max(shp_data.bounds.maxx))
@@ -90,4 +95,7 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data):
     lat_high_conf = lat_high_conf[~idx_tot]
     h_high_conf = h_high_conf[~idx_tot]
     delta_time_total_high_conf = delta_time_total_high_conf[~idx_tot]
-    return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf
+    if beam_flag == True:
+        return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf
+    else:
+        return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf

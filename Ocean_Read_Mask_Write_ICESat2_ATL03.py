@@ -31,8 +31,10 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--machine',default='t',help='Machine to run on (t, b or local)')
+    parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
     args = parser.parse_args()
     machine_name = args.machine
+    beam_flag = args.beams
 
     DTU21_toggle = config.getboolean('OCEAN_CONSTANTS','DTU21_toggle')
     landmask_toggle = config.getboolean('OCEAN_CONSTANTS','landmask_toggle')
@@ -117,7 +119,7 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],model_dir,geophys_corr_toggle,ocean_tide_replacement_toggle)
+        lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],model_dir,geophys_corr_toggle,ocean_tide_replacement_toggle,beam_flag)
         if len(lon_high_med_conf) == 0:
             continue
         utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)

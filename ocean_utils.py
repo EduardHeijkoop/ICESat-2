@@ -17,7 +17,7 @@ from pyTMD.read_FES_model import extract_FES_constants
 
 total_seconds = np.vectorize(datetime.timedelta.total_seconds)
 
-def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True,ocean_tide_replacement_toggle=False,extrapolate_fes2014=True):
+def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True,ocean_tide_replacement_toggle=False,extrapolate_fes2014=True,beam_flag=False):
     #Given a directory of downloaded ATL03 hdf5 files,
     #reads them and writes the high confidence photons to a CSV as:
     #longitude,latitude,height (WGS84),time [UTC]
@@ -35,6 +35,8 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
     lat_high_med_conf = np.empty([0,1],dtype=float)
     h_high_med_conf = np.empty([0,1],dtype=float)
     delta_time_total_high_med_conf = np.empty([0,1],dtype=float)
+    if beam_flag == True:
+        beam_high_med_conf = np.empty([0,1],dtype=str)
     for h5_file in file_list:
         full_file = icesat2_dir + city_name + '/' + h5_file
         atl03_file = h5py.File(full_file,'r')
@@ -147,8 +149,14 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
             lat_high_med_conf = np.append(lat_high_med_conf,tmp_lat_high_med_conf)
             h_high_med_conf = np.append(h_high_med_conf,tmp_h_high_med_conf)
             delta_time_total_high_med_conf = np.append(delta_time_total_high_med_conf,tmp_delta_time_total_high_med_conf)
+            if beam_flag == True:
+                tmp_beam_high_med_conf = np.repeat(beam,len(lon_high_med_conf))
+                beam_high_med_conf = np.append(beam_high_med_conf,tmp_beam_high_med_conf)
 
-    return lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf
+    if beam_flag == True:
+        return lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf,beam_high_conf
+    else:
+        return lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf
 
 def ocean_tide_replacement(lon,lat,utc_time,model_dir):
     '''
