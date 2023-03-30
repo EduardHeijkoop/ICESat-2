@@ -154,7 +154,7 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
                 beam_high_med_conf = np.append(beam_high_med_conf,tmp_beam_high_med_conf)
 
     if beam_flag == True:
-        return lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf,beam_high_conf
+        return lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf,beam_high_med_conf
     else:
         return lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf
 

@@ -119,10 +119,12 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],model_dir,geophys_corr_toggle,ocean_tide_replacement_toggle,beam_flag)
+        if beam_flag == True:
+            lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf,beam_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],model_dir,geophys_corr_toggle,ocean_tide_replacement_toggle,beam_flag)
+        else:    
+            lon_high_med_conf,lat_high_med_conf,h_high_med_conf,delta_time_total_high_med_conf = analyze_icesat2_ocean(icesat2_dir,df_extents.iloc[i],model_dir,geophys_corr_toggle,ocean_tide_replacement_toggle,beam_flag)
         if len(lon_high_med_conf) == 0:
             continue
-        utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
         if landmask_toggle == True:
             landmask = landmask_icesat2(lon_high_med_conf,lat_high_med_conf,lon_coast,lat_coast,landmask_c_file,landmask_inside_flag)
             lon_high_med_conf = lon_high_med_conf[landmask]
@@ -132,6 +134,7 @@ def main():
             utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf_masked.txt'
         else:
+            utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf.txt'
         if geophys_corr_toggle == False:
             icesat2_file = icesat2_file.replace('ATL03','UNCORRECTED_ATL03')
@@ -139,9 +142,15 @@ def main():
             icesat2_file = icesat2_file.replace('_ATL03','_ATL03_FES2014')
         
         if timestamp_toggle == True:
-            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf,utc_time_high_med_conf.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
+            if beam_flag == True:
+                np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf,utc_time_high_med_conf.astype(object),beam_high_med_conf.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s,%s',delimiter=',')
+            else:
+                np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf,utc_time_high_med_conf.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
         else:
-            np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf],fmt='%11.6f,%11.6f,%11.6f',delimiter=',')
+            if beam_flag == True:
+                np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf,beam_high_med_conf.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
+            else:
+                np.savetxt(icesat2_file,np.c_[lon_high_med_conf,lat_high_med_conf,h_high_med_conf],fmt='%11.6f,%11.6f,%11.6f',delimiter=',')
         
         if DTU21_toggle == True:
             DTU21_cond = DTU21_filter_icesat2(h_high_med_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],DTU21_threshold,DTU21_path)
@@ -150,6 +159,7 @@ def main():
             h_high_med_conf_DTU21 = h_high_med_conf[DTU21_cond]
             delta_time_total_high_med_conf_DTU21 = delta_time_total_high_med_conf[DTU21_cond]
             utc_time_high_med_conf_DTU21 = gps2utc(delta_time_total_high_med_conf_DTU21)
+            beam_high_med_conf_DTU21 = beam_high_med_conf[DTU21_cond]
             if landmask_toggle == True:
                 icesat2_dtu21_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf_masked_DTU21_filtered_threshold_{DTU21_threshold_str}_m.txt'
             else:
@@ -159,9 +169,15 @@ def main():
             if ocean_tide_replacement_toggle == True:
                 icesat2_dtu21_file = icesat2_dtu21_file.replace('_ATL03','_ATL03_FES2014')
             if timestamp_toggle == True:
-                np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21,utc_time_high_med_conf_DTU21.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
+                if beam_flag == True:
+                    np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21,utc_time_high_med_conf_DTU21.astype(object),beam_high_med_conf_DTU21.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s,%s',delimiter=',')
+                else:
+                    np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21,utc_time_high_med_conf_DTU21.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
             else:
-                np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21],fmt='%11.6f,%11.6f,%11.6f',delimiter=',')
+                if beam_flag == True:
+                    np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21,beam_high_med_conf_DTU21.astype(object)],fmt='%11.6f,%11.6f,%11.6f,%s',delimiter=',')
+                else:
+                    np.savetxt(icesat2_dtu21_file,np.c_[lon_high_med_conf_DTU21,lat_high_med_conf_DTU21,h_high_med_conf_DTU21],fmt='%11.6f,%11.6f,%11.6f',delimiter=',')
         print(f'Done with {city_name} at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         print(' ')
 
