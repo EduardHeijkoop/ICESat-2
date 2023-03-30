@@ -150,7 +150,7 @@ def analyze_icesat2_ocean(icesat2_dir,df_city,model_dir,geophys_corr_toggle=True
             h_high_med_conf = np.append(h_high_med_conf,tmp_h_high_med_conf)
             delta_time_total_high_med_conf = np.append(delta_time_total_high_med_conf,tmp_delta_time_total_high_med_conf)
             if beam_flag == True:
-                tmp_beam_high_med_conf = np.repeat(beam,len(lon_high_med_conf))
+                tmp_beam_high_med_conf = np.repeat(beam,len(tmp_lon_high_med_conf))
                 beam_high_med_conf = np.append(beam_high_med_conf,tmp_beam_high_med_conf)
 
     if beam_flag == True:

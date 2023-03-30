@@ -96,6 +96,7 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False):
     h_high_conf = h_high_conf[~idx_tot]
     delta_time_total_high_conf = delta_time_total_high_conf[~idx_tot]
     if beam_flag == True:
+        beam_high_conf = beam_high_conf[~idx_tot]
         return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf
     else:
         return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf
