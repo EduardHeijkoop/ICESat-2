@@ -126,11 +126,12 @@ def main():
             lat_high_conf = lat_high_conf[landmask]
             h_high_conf = h_high_conf[landmask]
             delta_time_total_high_conf = delta_time_total_high_conf[landmask]
-            utc_time_high_conf = gps2utc(delta_time_total_high_conf)
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked.txt'
+            if beam_flag == True:
+                beam_high_conf = beam_high_conf[landmask]
         else:
-            utc_time_high_conf = gps2utc(delta_time_total_high_conf)
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf.txt'
+        utc_time_high_conf = gps2utc(delta_time_total_high_conf)
         
         if timestamp_toggle == True:
             if beam_flag == True:

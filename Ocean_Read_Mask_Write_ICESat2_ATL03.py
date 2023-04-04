@@ -131,11 +131,13 @@ def main():
             lat_high_med_conf = lat_high_med_conf[landmask]
             h_high_med_conf = h_high_med_conf[landmask]
             delta_time_total_high_med_conf = delta_time_total_high_med_conf[landmask]
-            utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf_masked.txt'
+            if beam_flag == True:
+                beam_high_med_conf = beam_high_med_conf[landmask]
         else:
-            utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_med_conf.txt'
+        utc_time_high_med_conf = gps2utc(delta_time_total_high_med_conf)
+
         if geophys_corr_toggle == False:
             icesat2_file = icesat2_file.replace('ATL03','UNCORRECTED_ATL03')
         if ocean_tide_replacement_toggle == True:
