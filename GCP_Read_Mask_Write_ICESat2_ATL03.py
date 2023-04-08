@@ -33,9 +33,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--machine',default='t',help='Machine to run on (t, b or local)')
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
+    parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
     args = parser.parse_args()
     machine_name = args.machine
     beam_flag = args.beams
+    weak_flag = args.weak
 
     SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
     landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
@@ -114,10 +116,7 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        if beam_flag == True:
-            lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf = analyze_icesat2_land(icesat2_dir,df_extents.iloc[i],shp_data,beam_flag)
-        else:
-            lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf = analyze_icesat2_land(icesat2_dir,df_extents.iloc[i],shp_data,beam_flag)
+        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf = analyze_icesat2_land(icesat2_dir,df_extents.iloc[i],shp_data,beam_flag,weak_flag)
         if len(lon_high_conf) == 0:
             continue
         if landmask_toggle == True:

@@ -1,7 +1,7 @@
 import numpy as np
 import h5py
 
-def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False):
+def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False,weak_flag=False):
     '''
     Given a directory of downloaded ATL03 hdf5 files,
     reads them and writes the high confidence photons to a CSV as:
@@ -13,6 +13,9 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False):
         file_list = f3.read().splitlines()
     beam_list_r = ['gt1r','gt2r','gt3r']
     beam_list_l = ['gt1l','gt2l','gt3l']
+    if weak_flag == True:
+        beam_list_r = ['gt1l','gt2l','gt3l']
+        beam_list_l = ['gt1r','gt2r','gt3r']
     lon_high_conf = np.empty([0,1],dtype=float) #Initialize arrays and start reading .h5 files
     lat_high_conf = np.empty([0,1],dtype=float)
     h_high_conf = np.empty([0,1],dtype=float)
