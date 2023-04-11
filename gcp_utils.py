@@ -1,13 +1,12 @@
 import numpy as np
 import h5py
 
-def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False,weak_flag=False):
+def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True):
     '''
     Given a directory of downloaded ATL03 hdf5 files,
     reads them and writes the high confidence photons to a CSV as:
     longitude,latitude,height [WGS84],time [UTC](,beam)
     '''
-    city_name = df_city.city
     icesat2_list = icesat2_dir+city_name + '/icesat2_list.txt'
     with open(icesat2_list) as f3:
         file_list = f3.read().splitlines()
@@ -22,6 +21,8 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False,weak_flag=
     delta_time_total_high_conf = np.empty([0,1],dtype=float)
     if beam_flag == True:
         beam_high_conf = np.empty([0,1],dtype=str)
+    if sigma_flag == True:
+        sigma_h_high_conf = np.empty([0,1],dtype=float)
     for h5_file in file_list:
         full_file = icesat2_dir + city_name + '/' + h5_file
         atl03_file = h5py.File(full_file,'r')
@@ -81,6 +82,11 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False,weak_flag=
             if beam_flag == True:
                 tmp_beam_high_conf = np.repeat(beam,len(tmp_lon_high_conf))
                 beam_high_conf = np.append(beam_high_conf,tmp_beam_high_conf)
+            if sigma_flag == True:
+                tmp_sigma_h = np.asarray(atl03_file['/'+beam+'/geolocation/sigma_h']).squeeze()
+                tmp_sigma_h_high_conf = tmp_sigma_h[idx_flags]
+                sigma_h_high_conf = np.append(sigma_h_high_conf,tmp_sigma_h_high_conf)
+
     '''
     A lot of data will be captured off the coast that we don't want,
     this is a quick way of getting rid of that
@@ -95,6 +101,11 @@ def analyze_icesat2_land(icesat2_dir,df_city,shp_data,beam_flag=False,weak_flag=
     delta_time_total_high_conf = delta_time_total_high_conf[~idx_tot]
     if beam_flag == True:
         beam_high_conf = beam_high_conf[~idx_tot]
-        return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf
     else:
-        return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf
+        beam_high_conf = None
+    if sigma_flag == True:
+        sigma_h_high_conf = sigma_h_high_conf[~idx_tot]
+    else:
+        sigma_h_high_conf = None
+
+    return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_h_high_conf

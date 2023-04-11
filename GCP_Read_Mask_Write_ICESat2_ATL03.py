@@ -33,11 +33,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--machine',default='t',help='Machine to run on (t, b or local)')
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
+    parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
     args = parser.parse_args()
     machine_name = args.machine
     beam_flag = args.beams
     weak_flag = args.weak
+    sigma_flag = args.sigma
 
     SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
     landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
@@ -116,7 +118,7 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf = analyze_icesat2_land(icesat2_dir,df_extents.iloc[i],shp_data,beam_flag,weak_flag)
+        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,df_extents.iloc[i],shp_data,beam_flag,weak_flag,sigma_flag)
         if len(lon_high_conf) == 0:
             continue
         if landmask_toggle == True:
@@ -131,19 +133,45 @@ def main():
         else:
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf.txt'
         utc_time_high_conf = gps2utc(delta_time_total_high_conf)
+        
+        '''
+        Redo writing of files to prevent all these if statements
+        write files separately and merge as needed
+        '''
         if weak_flag == True:
             icesat2_file = icesat2_file.replace('_high_conf','_high_conf_weak')
-        
+        file_list = [icesat2_file]
+        np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%.6f,%.6f,%.6f',delimiter=',')
         if timestamp_toggle == True:
-            if beam_flag == True:
-                np.savetxt(icesat2_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object),beam_high_conf.astype(object)],fmt='%.6f,%.6f,%.6f,%s,%s',delimiter=',')
-            else:
-                np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object)],fmt='%.6f,%.6f,%.6f,%s',delimiter=',')
-        else:
-            if beam_flag == True:
-                np.savetxt(icesat2_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf,lat_high_conf,h_high_conf,beam_high_conf.astype(object)],fmt='%.6f,%.6f,%.6f,%s',delimiter=',')
-            else:
-                np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%.6f,%.6f,%.6f',delimiter=',')
+            icesat2_time_file = icesat2_file.replace('.txt','_time.txt')
+            file_list.append(icesat2_time_file)
+            np.savetxt(icesat2_time_file,utc_time_high_conf.astype(object),fmt='%s',delimiter=',')
+        if beam_flag == True:
+            icesat2_beam_file = icesat2_file.replace('.txt','_beam.txt')
+            file_list.append(icesat2_beam_file)
+            np.savetxt(icesat2_beam_file,beam_high_conf.astype(object),fmt='%s',delimiter=',')
+        if sigma_flag == True:
+            icesat2_sigma_file = icesat2_file.replace('.txt','_sigma.txt')
+            file_list.append(icesat2_sigma_file)
+            np.savetxt(icesat2_sigma_file,sigma_high_conf,fmt='%.6f',delimiter=',')
+
+        if len(file_list) > 1:
+            tmp_file = icesat2_file.replace('.txt','_tmp.txt')
+            paste_command = f'paste -d , {" ".join(file_list)} > {tmp_file}'
+            move_command = f'mv {tmp_file} {icesat2_file}'
+            subprocess.run(paste_command,shell=True)
+            subprocess.run(move_command,shell=True)
+
+        # if timestamp_toggle == True:
+        #     if beam_flag == True:
+        #         np.savetxt(icesat2_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object),beam_high_conf.astype(object)],fmt='%.6f,%.6f,%.6f,%s,%s',delimiter=',')
+        #     else:
+        #         np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf,utc_time_high_conf.astype(object)],fmt='%.6f,%.6f,%.6f,%s',delimiter=',')
+        # else:
+        #     if beam_flag == True:
+        #         np.savetxt(icesat2_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf,lat_high_conf,h_high_conf,beam_high_conf.astype(object)],fmt='%.6f,%.6f,%.6f,%s',delimiter=',')
+        #     else:
+        #         np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%.6f,%.6f,%.6f',delimiter=',')
         
         if SRTM_toggle:
             SRTM_cond = SRTM_filter_icesat2(lon_high_conf,lat_high_conf,h_high_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],user,pw,SRTM_threshold,EGM96_path)
