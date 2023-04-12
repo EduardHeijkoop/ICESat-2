@@ -84,7 +84,11 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
                 beam_high_conf = np.append(beam_high_conf,tmp_beam_high_conf)
             if sigma_flag == True:
                 tmp_sigma_h = np.asarray(atl03_file['/'+beam+'/geolocation/sigma_h']).squeeze()
-                tmp_sigma_h_high_conf = tmp_sigma_h[idx_flags]
+                tmp_sigma_h = tmp_sigma_h[idx_ref_ph]
+                tmp_sigma_h_full_ph = np.zeros(tmp_lon.shape)
+                for i in range(len(tmp_ph_index_beg)):
+                    tmp_sigma_h_full_ph[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = tmp_sigma_h[i]
+                tmp_sigma_h_high_conf = tmp_sigma_h_full_ph[idx_flags]
                 sigma_h_high_conf = np.append(sigma_h_high_conf,tmp_sigma_h_high_conf)
 
     '''

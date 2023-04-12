@@ -6,6 +6,7 @@ import getpass
 import configparser
 import argparse
 import warnings
+import subprocess
 
 from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2
 from icesat2_utils import gps2utc,landmask_icesat2,SRTM_filter_icesat2
@@ -118,7 +119,7 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,df_extents.iloc[i],shp_data,beam_flag,weak_flag,sigma_flag)
+        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag)
         if len(lon_high_conf) == 0:
             continue
         if landmask_toggle == True:
