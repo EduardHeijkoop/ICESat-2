@@ -9,8 +9,8 @@ import warnings
 import subprocess
 
 from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2
-from icesat2_utils import gps2utc,landmask_icesat2,SRTM_filter_icesat2
-from gcp_utils import analyze_icesat2_land
+from icesat2_utils import gps2utc,landmask_icesat2
+from gcp_utils import analyze_icesat2_land, copernicus_filter_icesat2
 
 ###Written by Eduard Heijkoop, University of Colorado###
 ###Eduard.Heijkoop@colorado.edu###
@@ -33,24 +33,30 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--machine',default='t',help='Machine to run on (t, b or local)')
+    parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
+    parser.add_argument('--landmask',action='store_true',default=False,help='Toggle to mask photons over land/water.')
+    parser.add_argument('--time',action='store_true',default=False,help='Toggle to print timestamps.')
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
     parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
     args = parser.parse_args()
     machine_name = args.machine
+    copernicus_flag = args.copernicus
+    landmask_flag = args.landmask
+    timestamp_flag = args.time
     beam_flag = args.beams
     weak_flag = args.weak
     sigma_flag = args.sigma
 
-    SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
-    landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
-    timestamp_toggle = config.getboolean('GCP_CONSTANTS','timestamp_toggle')
-    on_off_str = ('off','on')
+    # SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
+    # landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
+    # timestamp_toggle = config.getboolean('GCP_CONSTANTS','timestamp_toggle')
+    # on_off_str = ('off','on')
 
-    print('Current settings:')
-    print(f'SRTM filtering : {on_off_str[SRTM_toggle]}')
-    print(f'Landmask       : {on_off_str[landmask_toggle]}')
-    print(f'Timestamps     : {on_off_str[timestamp_toggle]}')
+    # print('Current settings:')
+    # print(f'SRTM filtering : {on_off_str[SRTM_toggle]}')
+    # print(f'Landmask       : {on_off_str[landmask_toggle]}')
+    # print(f'Timestamps     : {on_off_str[timestamp_toggle]}')
 
     input_file = config.get('GCP_PATHS','input_file') #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
     osm_shp_path = config.get('GENERAL_PATHS','osm_shp_path') #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
@@ -61,25 +67,24 @@ def main():
 
     user = config.get('GENERAL','user') #Your NASA EarthData username
     token = get_token(user) #Create NSIDC token to download ICESat-2
-    if SRTM_toggle:
-        pw = getpass.getpass() #Your NASA EarthData password
-        SRTM_threshold = config.getfloat('GCP_CONSTANTS','SRTM_Threshold') #set your SRTM threshold here
-        SRTM_threshold_str = str(SRTM_threshold).replace('.','p') #replace decimal point with p for file name
-        EGM96_path = config.get('GCP_PATHS','EGM96_path') #supplied on github
+    if copernicus_flag:
+        copernicus_threshold = config.getfloat('GCP_CONSTANTS','Copernicus_Threshold') #set your SRTM threshold here
+        copernicus_threshold_str = str(copernicus_threshold).replace('.','p') #replace decimal point with p for file name
+        EGM2008_path = config.get('GCP_PATHS','EGM2008_path') #supplied on github
 
     if machine_name == 'b':
         osm_shp_path = osm_shp_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
-        if SRTM_toggle:
-            EGM96_path = EGM96_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/') 
+        if copernicus_flag:
+            EGM2008_path = EGM2008_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/') 
     elif machine_name == 'local':
         osm_shp_path = osm_shp_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
         icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/','/media/heijkoop/DATA/')
         error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/','/media/heijkoop/DATA/')
         landmask_c_file = landmask_c_file.replace('/home/eheijkoop/Scripts/','/media/heijkoop/DATA/Dropbox/TU/PhD/Github/')
-        if SRTM_toggle:
-            EGM96_path = EGM96_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/GEOID/')
+        if copernicus_flag:
+            EGM2008_path = EGM2008_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/GEOID/')
             
     if not os.path.isdir(icesat2_dir):
         os.mkdir(icesat2_dir)
@@ -121,7 +126,7 @@ def main():
         lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag)
         if len(lon_high_conf) == 0:
             continue
-        if landmask_toggle == True:
+        if landmask_flag == True:
             landmask = landmask_icesat2(lon_high_conf,lat_high_conf,lon_coast,lat_coast,landmask_c_file,landmask_inside_flag)
             lon_high_conf = lon_high_conf[landmask]
             lat_high_conf = lat_high_conf[landmask]
@@ -137,8 +142,8 @@ def main():
         if weak_flag == True:
             icesat2_file = icesat2_file.replace('_high_conf','_high_conf_weak')
         file_list = [icesat2_file]
-        np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2')
-        if timestamp_toggle == True:
+        np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
+        if timestamp_flag == True:
             icesat2_time_file = icesat2_file.replace('.txt','_time.txt')
             file_list.append(icesat2_time_file)
             np.savetxt(icesat2_time_file,utc_time_high_conf.astype(object),fmt='%s',delimiter=',',header='time')
@@ -160,32 +165,32 @@ def main():
             subprocess.run(move_command,shell=True)
             subprocess.run(rm_command,shell=True)
         
-        if SRTM_toggle:
-            SRTM_cond = SRTM_filter_icesat2(lon_high_conf,lat_high_conf,h_high_conf,icesat2_file,icesat2_dir,df_extents.iloc[i],user,pw,SRTM_threshold,EGM96_path)
-            lon_high_conf_SRTM = lon_high_conf[SRTM_cond]
-            lat_high_conf_SRTM = lat_high_conf[SRTM_cond]
-            h_high_conf_SRTM = h_high_conf[SRTM_cond]
-            delta_time_total_high_conf_SRTM = delta_time_total_high_conf[SRTM_cond]
-            if landmask_toggle:
-                icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked_SRTM_filtered_threshold_{SRTM_threshold_str}_m.txt'
+        if copernicus_flag == True:
+            copernicus_cond = copernicus_filter_icesat2(lon_high_conf,lat_high_conf,icesat2_file,icesat2_dir,city_name,copernicus_threshold,EGM2008_path)
+            lon_high_conf_SRTM = lon_high_conf[copernicus_cond]
+            lat_high_conf_SRTM = lat_high_conf[copernicus_cond]
+            h_high_conf_SRTM = h_high_conf[copernicus_cond]
+            delta_time_total_high_conf_SRTM = delta_time_total_high_conf[copernicus_cond]
+            if landmask_flag:
+                icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked_SRTM_filtered_threshold_{copernicus_threshold_str}_m.txt'
             else:
-                icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_SRTM_filtered_threshold_{SRTM_threshold_str}_m.txt'
+                icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_SRTM_filtered_threshold_{copernicus_threshold_str}_m.txt'
             if weak_flag == True:
                 icesat2_srtm_file = icesat2_srtm_file.replace('_high_conf','_high_conf_weak')
             file_list_srtm = [icesat2_srtm_file]
             np.savetxt(icesat2_srtm_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2')
-            if timestamp_toggle == True:
+            if timestamp_flag == True:
                 utc_time_high_conf_SRTM = gps2utc(delta_time_total_high_conf_SRTM)
                 icesat2_srtm_time_file = icesat2_srtm_file.replace('.txt','_time.txt')
                 file_list_srtm.append(icesat2_srtm_time_file)
                 np.savetxt(icesat2_srtm_time_file,utc_time_high_conf_SRTM.astype(object),fmt='%s',delimiter=',',header='time')
             if beam_flag == True:
-                beam_high_conf_SRTM = beam_high_conf[SRTM_cond]
+                beam_high_conf_SRTM = beam_high_conf[copernicus_cond]
                 icesat2_srtm_beam_file = icesat2_srtm_file.replace('.txt','_beam.txt')
                 file_list_srtm.append(icesat2_srtm_beam_file)
                 np.savetxt(icesat2_srtm_beam_file,beam_high_conf_SRTM.astype(object),fmt='%s',delimiter=',',header='beam')
             if sigma_flag == True:
-                sigma_high_conf_SRTM = sigma_high_conf[SRTM_cond]
+                sigma_high_conf_SRTM = sigma_high_conf[copernicus_cond]
                 icesat2_srtm_sigma_file = icesat2_srtm_file.replace('.txt','_sigma.txt')
                 file_list_srtm.append(icesat2_srtm_sigma_file)
                 np.savetxt(icesat2_srtm_sigma_file,sigma_high_conf_SRTM,fmt='%.6f',delimiter=',',header='sigma')

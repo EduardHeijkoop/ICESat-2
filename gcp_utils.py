@@ -1,5 +1,9 @@
 import numpy as np
 import h5py
+import subprocess
+import os
+from osgeo import gdal,gdalconst,osr
+import pandas as pd
 
 def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True):
     '''
@@ -113,3 +117,131 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
         sigma_h_high_conf = None
 
     return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_h_high_conf
+
+def copernicus_filter_icesat2(lon,lat,icesat2_file,icesat2_dir,city_name,copernicus_threshold,egm2008_file):
+    lon_min = np.nanmin(lon)
+    lon_max = np.nanmax(lon)
+    lat_min = np.nanmin(lat)
+    lat_max = np.nanmax(lat)
+    output_dir = f'{icesat2_dir}{city_name}/'
+    copernicus_wgs84_file = f'{output_dir}{city_name}_Copernicus_WGS84.tif'
+    download_copernicus(lon_min,lon_max,lat_min,lat_max,egm2008_file,output_dir,copernicus_wgs84_file)
+    copernicus_sampled_file = f'{output_dir}{city_name}_sampled_Copernicus.txt'
+    print('Sampling Copernicus...')
+    sample_raster(copernicus_wgs84_file, icesat2_file, copernicus_sampled_file,header='height_copernicus')
+    print('Sampled Copernicus.')
+    df_copernicus = pd.read_csv(copernicus_sampled_file)
+    df_copernicus['dh'] = df_copernicus.height_copernicus - df_copernicus.height_icesat2
+    copernicus_cond = np.asarray(np.abs(df_copernicus.dh) < copernicus_threshold)
+    return copernicus_cond
+
+def get_copernicus_tiles(lon_min,lon_max,lat_min,lat_max):
+    COPERNICUS_list = []
+    lon_range = range(int(np.floor(lon_min)),int(np.floor(lon_max))+1)
+    lat_range = range(int(np.floor(lat_min)),int(np.floor(lat_max))+1)
+    for i in range(len(lon_range)):
+        for j in range(len(lat_range)):
+            if lon_range[i] >= 0:
+                lonLetter = 'E'
+            else:
+                lonLetter = 'W'
+            if lat_range[j] >= 0:
+                latLetter = 'N'
+            else:
+                latLetter = 'S'
+            lonCode = f"{int(np.abs(np.floor(lon_range[i]))):03d}"
+            latCode = f"{int(np.abs(np.floor(lat_range[j]))):02d}"
+            COPERNICUS_id = f'Copernicus_DSM_COG_10_{latLetter}{latCode}_00_{lonLetter}{lonCode}_00_DEM/Copernicus_DSM_COG_10_{latLetter}{latCode}_00_{lonLetter}{lonCode}_00_DEM.tif'
+            COPERNICUS_list.append(COPERNICUS_id)
+    return sorted(COPERNICUS_list)
+
+def download_copernicus(lon_min,lon_max,lat_min,lat_max,egm2008_file,tmp_dir,output_file):
+    tile_array = get_copernicus_tiles(lon_min,lon_max,lat_min,lat_max)
+    copernicus_aws_base = 's3://copernicus-dem-30m/'
+    merge_command = f'gdal_merge.py -q -o tmp_merged.tif '
+    for tile in tile_array:
+        dl_command = f'aws s3 cp --quiet --no-sign-request {copernicus_aws_base}{tile} .'
+        subprocess.run(dl_command,shell=True,cwd=tmp_dir)
+        if os.path.isfile(f'{tmp_dir}{tile.split("/")[-1]}'):
+            merge_command = f'{merge_command} {tmp_dir}{tile.split("/")[-1]} '
+    subprocess.run(merge_command,shell=True,cwd=tmp_dir)
+    [subprocess.run(f'rm {tile.split("/")[-1]}',shell=True,cwd=tmp_dir) for tile in tile_array if os.path.isfile(f'{tmp_dir}{tile.split("/")[-1]}')]
+    warp_command = f'gdalwarp -q -te {lon_min} {lat_min} {lon_max} {lat_max} tmp_merged.tif tmp_merged_clipped.tif'
+    subprocess.run(warp_command,shell=True,cwd=tmp_dir)
+    subprocess.run(f'rm tmp_merged.tif',shell=True,cwd=tmp_dir)
+    if egm2008_file is not None:
+        resample_raster(egm2008_file,f'{tmp_dir}tmp_merged_clipped.tif',f'{tmp_dir}EGM2008_resampled.tif',quiet_flag=True)
+        calc_command = f'gdal_calc.py -A tmp_merged_clipped.tif -B EGM2008_resampled.tif --outfile={output_file} --calc=\"A+B\" --format=GTiff --co=\"COMPRESS=LZW\" --co=\"BIGTIFF=IF_SAFER\" --quiet'
+        subprocess.run(calc_command,shell=True,cwd=tmp_dir)
+        subprocess.run(f'rm tmp_merged_clipped.tif EGM2008_resampled.tif',shell=True,cwd=tmp_dir)
+    else:
+        subprocess.run(f'mv tmp_merged_clipped.tif {output_file}',shell=True,cwd=tmp_dir)
+
+def resample_raster(src_filename,match_filename,dst_filename,nodata=-9999,resample_method='bilinear',compress=True,quiet_flag=False):
+    '''
+    src = what you want to resample
+    match = resample to this one's resolution
+    dst = output
+    method = nearest neighbor, bilinear (default), cubic, cubic spline
+    '''
+    src = gdal.Open(src_filename, gdalconst.GA_ReadOnly)
+    src_proj = src.GetProjection()
+    src_geotrans = src.GetGeoTransform()
+    src_epsg = osr.SpatialReference(wkt=src_proj).GetAttrValue('AUTHORITY',1)
+    match_ds = gdal.Open(match_filename, gdalconst.GA_ReadOnly)
+    match_proj = match_ds.GetProjection()
+    match_geotrans = match_ds.GetGeoTransform()
+    wide = match_ds.RasterXSize
+    high = match_ds.RasterYSize
+    dst = gdal.GetDriverByName('GTiff').Create(dst_filename,wide,high,1,gdalconst.GDT_Float32)
+    dst.SetGeoTransform(match_geotrans)
+    dst.SetProjection(match_proj)
+    if resample_method == 'nearest':
+        gdal.ReprojectImage(src,dst,src_proj,match_proj,gdalconst.GRA_NearestNeighbour)
+    elif resample_method == 'bilinear':
+        gdal.ReprojectImage(src,dst,src_proj,match_proj,gdalconst.GRA_Bilinear)
+    elif resample_method == 'cubic':
+        gdal.ReprojectImage(src,dst,src_proj,match_proj,gdalconst.GRA_Cubic)
+    elif resample_method == 'cubicspline':
+        gdal.ReprojectImage(src,dst,src_proj,match_proj,gdalconst.GRA_CubicSpline)
+    del dst # Flush
+    if compress == True:
+        compress_raster(dst_filename,nodata,quiet_flag)
+    return None
+
+def sample_raster(raster_path, csv_path, output_file,nodata='-9999',header=None,proj='wgs84'):
+    output_dir = os.path.dirname(output_file)
+    raster_base = os.path.splitext(raster_path.split('/')[-1])[0]
+    if header is not None:
+        cat_command = f"tail -n+2 {csv_path} | cut -d, -f1-2 | sed 's/,/ /g' | gdallocationinfo -valonly -{proj} {raster_path} > tmp_{raster_base}.txt"
+    else:
+        cat_command = f"cat {csv_path} | cut -d, -f1-2 | sed 's/,/ /g' | gdallocationinfo -valonly -{proj} {raster_path} > tmp_{raster_base}.txt"
+    subprocess.run(cat_command,shell=True,cwd=output_dir)
+    fill_nan_command = f"awk '!NF{{$0=\"NaN\"}}1' tmp_{raster_base}.txt > tmp2_{raster_base}.txt"
+    subprocess.run(fill_nan_command,shell=True,cwd=output_dir)
+    if header is not None:
+        subprocess.run(f"sed -i '1i {header}' tmp2_{raster_base}.txt",shell=True,cwd=output_dir)
+    paste_command = f"paste -d , {csv_path} tmp2_{raster_base}.txt > {output_file}"
+    subprocess.run(paste_command,shell=True,cwd=output_dir)
+    subprocess.run(f"sed -i '/{nodata}/d' {output_file}",shell=True,cwd=output_dir)
+    subprocess.run(f"sed -i '/NaN/d' {output_file}",shell=True,cwd=output_dir)
+    subprocess.run(f"sed -i '/nan/d' {output_file}",shell=True,cwd=output_dir)
+    subprocess.run(f"rm tmp_{raster_base}.txt tmp2_{raster_base}.txt",shell=True,cwd=output_dir)
+    return None
+
+def compress_raster(filename,nodata=-9999,quiet_flag = False):
+    '''
+    Compress a raster using gdal_translate
+    '''
+    file_ext = os.path.splitext(filename)[-1]
+    tmp_filename = filename.replace(file_ext,f'_LZW{file_ext}')
+    if nodata is not None:
+        compress_command = f'gdal_translate -co "COMPRESS=LZW" -co "BIGTIFF=IF_SAFER" -a_nodata {nodata} {filename} {tmp_filename}'
+    else:
+        compress_command = f'gdal_translate -co "COMPRESS=LZW" -co "BIGTIFF=IF_SAFER" {filename} {tmp_filename}'
+    if quiet_flag == True:
+        compress_command = compress_command.replace('gdal_translate','gdal_translate -q')
+    move_command = f'mv {tmp_filename} {filename}'
+    subprocess.run(compress_command,shell=True)
+    subprocess.run(move_command,shell=True)
+    return None
