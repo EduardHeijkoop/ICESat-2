@@ -146,15 +146,15 @@ def main():
         if timestamp_flag == True:
             icesat2_time_file = icesat2_file.replace('.txt','_time.txt')
             file_list.append(icesat2_time_file)
-            np.savetxt(icesat2_time_file,utc_time_high_conf.astype(object),fmt='%s',delimiter=',',header='time')
+            np.savetxt(icesat2_time_file,utc_time_high_conf.astype(object),fmt='%s',delimiter=',',header='time',comments='')
         if beam_flag == True:
             icesat2_beam_file = icesat2_file.replace('.txt','_beam.txt')
             file_list.append(icesat2_beam_file)
-            np.savetxt(icesat2_beam_file,beam_high_conf.astype(object),fmt='%s',delimiter=',',header='beam')
+            np.savetxt(icesat2_beam_file,beam_high_conf.astype(object),fmt='%s',delimiter=',',header='beam',comments='')
         if sigma_flag == True:
             icesat2_sigma_file = icesat2_file.replace('.txt','_sigma.txt')
             file_list.append(icesat2_sigma_file)
-            np.savetxt(icesat2_sigma_file,sigma_high_conf,fmt='%.6f',delimiter=',',header='sigma')
+            np.savetxt(icesat2_sigma_file,sigma_high_conf,fmt='%.6f',delimiter=',',header='sigma',comments='')
 
         if len(file_list) > 1:
             tmp_file = icesat2_file.replace('.txt','_tmp.txt')
@@ -178,22 +178,22 @@ def main():
             if weak_flag == True:
                 icesat2_srtm_file = icesat2_srtm_file.replace('_high_conf','_high_conf_weak')
             file_list_srtm = [icesat2_srtm_file]
-            np.savetxt(icesat2_srtm_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2')
+            np.savetxt(icesat2_srtm_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
             if timestamp_flag == True:
                 utc_time_high_conf_SRTM = gps2utc(delta_time_total_high_conf_SRTM)
                 icesat2_srtm_time_file = icesat2_srtm_file.replace('.txt','_time.txt')
                 file_list_srtm.append(icesat2_srtm_time_file)
-                np.savetxt(icesat2_srtm_time_file,utc_time_high_conf_SRTM.astype(object),fmt='%s',delimiter=',',header='time')
+                np.savetxt(icesat2_srtm_time_file,utc_time_high_conf_SRTM.astype(object),fmt='%s',delimiter=',',header='time',comments='')
             if beam_flag == True:
                 beam_high_conf_SRTM = beam_high_conf[copernicus_cond]
                 icesat2_srtm_beam_file = icesat2_srtm_file.replace('.txt','_beam.txt')
                 file_list_srtm.append(icesat2_srtm_beam_file)
-                np.savetxt(icesat2_srtm_beam_file,beam_high_conf_SRTM.astype(object),fmt='%s',delimiter=',',header='beam')
+                np.savetxt(icesat2_srtm_beam_file,beam_high_conf_SRTM.astype(object),fmt='%s',delimiter=',',header='beam',comments='')
             if sigma_flag == True:
                 sigma_high_conf_SRTM = sigma_high_conf[copernicus_cond]
                 icesat2_srtm_sigma_file = icesat2_srtm_file.replace('.txt','_sigma.txt')
                 file_list_srtm.append(icesat2_srtm_sigma_file)
-                np.savetxt(icesat2_srtm_sigma_file,sigma_high_conf_SRTM,fmt='%.6f',delimiter=',',header='sigma')
+                np.savetxt(icesat2_srtm_sigma_file,sigma_high_conf_SRTM,fmt='%.6f',delimiter=',',header='sigma',comments='')
 
             if len(file_list_srtm) > 1:
                 tmp_file = icesat2_srtm_file.replace('.txt','_tmp.txt')
