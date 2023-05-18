@@ -113,7 +113,7 @@ def main():
         bbox_code = create_bbox(icesat2_dir,df_extents.iloc[i])
         if bbox_code is not None:
             continue
-        download_code = download_icesat2(df_extents.iloc[i],token,error_log_file)
+        download_code = download_icesat2(df_extents.iloc[i],token,error_log_file,version=5)
         if download_code is not None:
             continue
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])

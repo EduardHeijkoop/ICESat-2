@@ -211,9 +211,9 @@ def cat_str_API(beam):
     return beam_command
 
 
-def download_icesat2(df_city,token,error_log_file):
+def download_icesat2(df_city,token,error_log_file,version=5):
     #Given lon/lat extents in a Pandas DataFrame (df_city),
-    #downloads ICESat-2 ATL03 version 6 geolocated photons
+    #downloads ICESat-2 ATL03 geolocated photons
     city_name = df_city.city
     t_start = df_city.t_start
     t_end = df_city.t_end
@@ -232,7 +232,7 @@ def download_icesat2(df_city,token,error_log_file):
     for beam in beam_list:
         coverage_command = coverage_command + cat_str_API(beam)
     coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
-    short_name_command = 'short_name=' + short_name + '&version=006'
+    short_name_command = f'short_name={short_name}&version={version:03d}'
     if t_start_valid == True:
         t_start = datetime.datetime.strptime(t_start,'%Y-%m-%d').strftime('%Y-%m-%d')
     else:
