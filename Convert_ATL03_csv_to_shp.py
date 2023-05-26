@@ -3,6 +3,7 @@ import shapely
 import pandas as pd
 import geopandas as gpd
 import argparse
+import warnings
 
 ###Written by Eduard Heijkoop, University of Colorado###
 ###Eduard.Heijkoop@colorado.edu###
@@ -37,6 +38,7 @@ def df_to_gdf(df,dt_threshold=0.01):
     return gdf
 
 def main():
+    warnings.simplefilter(action='ignore')
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_file',help='Path to input file.')
     parser.add_argument('--dt_threshold',help='Time threshold for jump in seconds.',default=0.01,type=float)
