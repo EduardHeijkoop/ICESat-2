@@ -32,7 +32,7 @@ def main():
     config.read(config_file)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--machine',default='t',help='Machine to run on (t, b or local)')
+    parser.add_argument('--machine',default='b',help='Machine to run on.',choices=['t','b','local'])
     parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
     parser.add_argument('--landmask',action='store_true',default=False,help='Toggle to mask photons over land/water.')
     parser.add_argument('--time',action='store_true',default=False,help='Toggle to print timestamps.')
