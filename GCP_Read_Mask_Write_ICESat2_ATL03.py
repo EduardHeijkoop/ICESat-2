@@ -9,7 +9,7 @@ import warnings
 import subprocess
 
 from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2
-from icesat2_utils import gps2utc,landmask_icesat2
+from icesat2_utils import gps2utc,parallel_landmask
 from gcp_utils import analyze_icesat2_land, copernicus_filter_icesat2
 
 ###Written by Eduard Heijkoop, University of Colorado###
@@ -39,6 +39,7 @@ def main():
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
     parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
+    parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
     args = parser.parse_args()
     machine_name = args.machine
     copernicus_flag = args.copernicus
@@ -47,6 +48,7 @@ def main():
     beam_flag = args.beams
     weak_flag = args.weak
     sigma_flag = args.sigma
+    N_cpus = args.N_cpus
 
     # SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
     # landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
@@ -127,7 +129,7 @@ def main():
         if len(lon_high_conf) == 0:
             continue
         if landmask_flag == True:
-            landmask = landmask_icesat2(lon_high_conf,lat_high_conf,lon_coast,lat_coast,landmask_c_file,landmask_inside_flag)
+            landmask = parallel_landmask(lon_high_conf,lat_high_conf,lon_coast,lat_coast,landmask_c_file,landmask_inside_flag,N_cpus=N_cpus)
             lon_high_conf = lon_high_conf[landmask]
             lat_high_conf = lat_high_conf[landmask]
             h_high_conf = h_high_conf[landmask]
