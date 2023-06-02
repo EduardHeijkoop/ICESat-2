@@ -70,7 +70,7 @@ def main():
     landmask_inside_flag = config.getint('GCP_CONSTANTS','landmask_inside_flag') #flag to find points inside (1) or outside (0) polygon
 
     user = config.get('GENERAL','user') #Your NASA EarthData username
-    token = get_token(user) #Create NSIDC token to download ICESat-2
+    pw = getpass.getpass('NASA EarthData password:') #Your NASA EarthData password
     if copernicus_flag:
         copernicus_threshold = config.getfloat('GCP_CONSTANTS','Copernicus_Threshold') #set your SRTM threshold here
         copernicus_threshold_str = str(copernicus_threshold).replace('.','p') #replace decimal point with p for file name
@@ -121,7 +121,7 @@ def main():
         bbox_code = create_bbox(icesat2_dir,df_extents.iloc[i])
         if bbox_code is not None:
             continue
-        download_code = download_icesat2(df_extents.iloc[i],token,error_log_file,version)
+        download_code = download_icesat2(user,pw,df_extents.iloc[i],version)
         if download_code is not None:
             continue
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
