@@ -1,6 +1,5 @@
 import os
 import glob
-import h5py
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -14,7 +13,11 @@ import xml.etree.ElementTree as ET
 import shapely
 import itertools
 import multiprocessing
-
+import json
+import requests
+import re
+import time
+import sys
 
 def get_lonlat_shp(shp_path):
     '''
@@ -111,6 +114,30 @@ def get_token(user):
     token = token_root[0].text
     return token
 
+# def user_pw_to_base64(user,pw):
+#     '''
+#     Converts username and password to base64 encoding
+#     '''
+#     user_pw = user+':'+pw
+#     user_pw_bytes = user_pw.encode('ascii')
+#     user_pw_base64 = base64.b64encode(user_pw_bytes)
+#     user_pw_base64 = user_pw_base64.decode('ascii')
+#     return user_pw_base64
+
+# def get_token(user):
+#     '''
+#     Given NASA EarthData username, download NASA URS token.
+#     Token expires after 60 days
+#     Checks if there are any tokens available and if so, if they have expired.
+#     If they are expired, deletes them, and generates a new token.
+#     '''
+#     today_datetime = datetime.datetime.now()
+#     if os.path.isfile('Token.json'):
+#         token_data = json.loads(open('Token.json').read())
+#         expiration_date = datetime.datetime.strptime(token_data['expiration_date'],'%m/%d/%Y')
+
+
+
 def cleanup():
     '''
     Cleans up a number of files that linger after download
@@ -137,7 +164,7 @@ def move_icesat2(icesat2_dir,df_city):
     city_name = df_city.city
     subprocess.run('mv *zip ' + icesat2_dir+city_name + '/',shell=True)
     subprocess.run('mv *h5 ' + icesat2_dir+city_name + '/',shell=True)
-    subprocess.run('rm response-header.txt',shell=True)
+    # subprocess.run('rm response-header.txt',shell=True)
     subprocess.run('unzip \'' + icesat2_dir+city_name + '/*zip\' -d ' + icesat2_dir+city_name + '/',shell=True)
     subprocess.run('mv ' + icesat2_dir+city_name + '/*/processed*.h5 ' + icesat2_dir+city_name+ '/',shell=True)
     [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
@@ -213,77 +240,267 @@ def cat_str_API(beam):
     return beam_command
 
 
-def download_icesat2(df_city,token,error_log_file,version=5):
-    #Given lon/lat extents in a Pandas DataFrame (df_city),
-    #downloads ICESat-2 ATL03 geolocated photons
+def download_icesat2(user,pw,df_city,version):
+    version_str = f'{version:03d}'
+    short_name = 'ATL03'
+    dl_path = os.getcwd()
+    symbol_list = ['|','/','-','\\','|','/','-','\\']
+    cmr_params = {'short_name':short_name}
+    cmr_collections_url = 'https://cmr.earthdata.nasa.gov/search/collections.json'
+    cmr_response = requests.get(cmr_collections_url, params=cmr_params)
+    cmr_results = json.loads(cmr_response.content)
+    available_versions = [entr['version_id'] for entr in cmr_results['feed']['entry']]
+    if not version_str in available_versions:
+        print(f'Version {version_str} not available. Available versions are: {available_versions}')
+        return None
+    
     city_name = df_city.city
     t_start = df_city.t_start
     t_end = df_city.t_end
     t_start_valid = validate_date(t_start)
     t_end_valid = validate_date(t_end)
-    lon_min_str = str(df_city.lon_min)
-    lon_max_str = str(df_city.lon_max)
-    lat_min_str = str(df_city.lat_min)
-    lat_max_str = str(df_city.lat_max)
-    token_command = 'token='+token
-    site_command = 'https://n5eil02u.ecs.nsidc.org/egi/request?'
-    email_command = 'email=false'
-    short_name = 'ATL03'
-    coverage_command = 'coverage='
-    beam_list = ['1l','1r','2l','2r','3l','3r']
-    for beam in beam_list:
-        coverage_command = coverage_command + cat_str_API(beam)
-    coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
-    short_name_command = f'short_name={short_name}&version={version:03d}'
+    base_url = 'https://n5eil02u.ecs.nsidc.org/egi/request'
+    granule_search_url = 'https://cmr.earthdata.nasa.gov/search/granules'
+    #Spatial bounding box:
+    bbox = f'{df_city.lon_min},{df_city.lat_min},{df_city.lon_max},{df_city.lat_max}'
+    bounding_box = bbox
+    #Temporal bounds:
     if t_start_valid == True:
         t_start = datetime.datetime.strptime(t_start,'%Y-%m-%d').strftime('%Y-%m-%d')
     else:
         t_start = '2018-10-01'
-
     if t_end_valid == True:
         t_end = datetime.datetime.strptime(t_end,'%Y-%m-%d').strftime('%Y-%m-%d')
     else:
         t_end = datetime.datetime.now().strftime('%Y-%m-%d')
-
     if np.logical_and(t_start_valid==False,t_end_valid==False):
         time_command = ''
     else:
-        time_command = 'time='+t_start+'T00:00:00,'+t_end+'T23:59:59&'
-    bounding_box_command = 'bounding_box='+lon_min_str+','+lat_min_str+','+lon_max_str+','+lat_max_str
-    bbox_command = 'bbox='+lon_min_str+','+lat_min_str+','+lon_max_str+','+lat_max_str
-    shape_command = bounding_box_command + '&' + bbox_command + '&'
-    page_number = 1
-    page_condition = True
-    while page_condition:
-        page_command = 'page_num='+str(page_number)
-        full_command = 'curl -O -J -k --dump-header response-header.txt \"' + \
-            site_command + '&' + short_name_command + '&' + token_command + '&' + \
-            email_command + '&' + shape_command + time_command + \
-            coverage_command + '&' + page_command + '\"'
-        subprocess.run(full_command,shell=True)
-        with open('response-header.txt','r') as f2:
-            response_line = f2.readline().replace('\n','')
-        if response_line[9:12] == '200':
-            page_number = page_number + 1
-        elif response_line[9:12] == '204':
-            print('End of download.')
-            page_condition = False
-        elif response_line[9:12] == '501':
-            page_condition = False
-        else:
-            print('Something bad happened.')
-            print('Exiting...')
-            page_condition = False
-    if page_number == 1:
-        print('Nothing was downloaded.')
-        print('Check extents - possibly no coverage!')
-        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(error_log_file,'a') as text_file:
-            text_file.write(now_str + ': ' + city_name + ' - No data download.\n')
-            print('No data downloaded!')
-        return 0
-    else:
+        time_command = f'{t_start}T00:00:00Z,{t_end}T23:59:59Z'
+    #Coverage in terms of variables you want to download.
+    coverage_command = ''
+    beam_list = ['1l','1r','2l','2r','3l','3r']
+    for beam in beam_list:
+        coverage_command = coverage_command + cat_str_API(beam)
+    coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
+
+    search_params = {
+        'short_name': short_name,
+        'version': version_str,
+        'temporal': time_command,
+        'page_size': 100,
+        'page_num': 1,
+        'bounding_box': bbox
+    }
+    granules = []
+    headers={'Accept': 'application/json'}
+    while True:
+        response = requests.get(granule_search_url, params=search_params, headers=headers)
+        results = json.loads(response.content)
+        if len(results['feed']['entry']) == 0:
+            break
+        granules.extend(results['feed']['entry'])
+        search_params['page_num'] += 1
+    print(f'There are {len(granules)} granules of {short_name} over {city_name}.')
+
+    # granule_sizes = [float(granule['granule_size']) for granule in granules]
+    # dl_size = np.sum(granule_sizes)
+    # file_size_ext = 'MB'
+    # if dl_size > 1024:
+    #     dl_size = dl_size / 1024
+    #     file_size_ext = 'GB'
+    # print(f'Total download size before spatial subsetting: {dl_size:.1f} {file_size_ext}')
+
+    capability_url = f'https://n5eil02u.ecs.nsidc.org/egi/capabilities/{short_name}.{version_str}.xml'
+    capability_session = requests.session()
+    capability_s = capability_session.get(capability_url)
+    capability_response = capability_session.get(capability_s.url,auth=(user,pw))
+    capability_root = ET.fromstring(capability_response.content)
+    subagent = [subset_agent.attrib for subset_agent in capability_root.iter('SubsetAgent')]
+    if len(subagent) == 0:
+        print('No subset agent found.')
         return None
+    spatial_subsetting_flag = bool(subagent[0]['spatialSubsetting'])
+    if spatial_subsetting_flag == False:
+        print('Spatial subsetting not available.')
+        return None
+    N_sync = int(subagent[0]['maxGransSyncRequest'])
+    N_async = int(subagent[0]['maxGransAsyncRequest'])
+
+    if len(granules) > N_sync:
+        request_mode = 'async'
+        page_size = N_async
+        print('Going for asynchronous request.')
+    else:
+        request_mode = 'stream'
+        page_size = N_sync
+        print('Going for synchronous request.')
+    page_num = int(np.ceil(len(granules)/page_size))
+
+    #empty parameters will be deleted, but can be added at user's discretion
+    param_dict = {'short_name': short_name, 
+                  'version': version_str, 
+                  'temporal': time_command, 
+                  'time': time_command.replace('Z',''), 
+                  'bounding_box': bounding_box, 
+                  'bbox': bbox, 
+                  'format': '', 
+                  'projection': '', 
+                  'projection_parameters': '',
+                  'Coverage': coverage_command, 
+                  'page_size': page_size, 
+                  'request_mode': request_mode, 
+                  'agent': '', 
+                  'email': '', }
+    param_dict = {k: v for k, v in param_dict.items() if v != ''}
+    param_string = '&'.join("{!s}={!r}".format(k,v) for (k,v) in param_dict.items())
+    param_string = param_string.replace("'","")
+
+    endpoint_list = [] 
+    for i in range(page_num):
+        page_val = i + 1
+        API_request = f'{base_url}?{param_string}&page_num={page_val}'
+        endpoint_list.append(API_request)
+
+    print(f'Downloading for {city_name}...')
+    if request_mode=='async':
+        for i in range(page_num):
+            page_val = i + 1
+            param_dict['page_num'] = page_val
+            request = capability_session.get(base_url, params=param_dict)
+            request.raise_for_status()
+            esir_root = ET.fromstring(request.content)
+            orderlist = []   
+            for order in esir_root.findall("./order/"):
+                orderlist.append(order.text)
+            orderID = orderlist[0]
+            statusURL = base_url + '/' + orderID
+            request_response = capability_session.get(statusURL)    
+            request_response.raise_for_status()
+            request_root = ET.fromstring(request_response.content)
+            statuslist = []
+            for status in request_root.findall("./requestStatus/"):
+                statuslist.append(status.text)
+            status = statuslist[0]
+            print('Processing at NSIDC...')
+            symbol_count = -1
+            while status == 'pending' or status == 'processing': 
+                symbol_count += 1
+                idx = np.mod(symbol_count,len(symbol_list))
+                sym = symbol_list[idx]
+                sys.stdout.write('\r')
+                sys.stdout.write(sym)
+                sys.stdout.flush()
+                time.sleep(10)
+                loop_response = capability_session.get(statusURL)
+                loop_response.raise_for_status()
+                loop_root = ET.fromstring(loop_response.content)
+                statuslist = []
+                for status in loop_root.findall("./requestStatus/"):
+                    statuslist.append(status.text)
+                status = statuslist[0]
+                if status == 'pending' or status == 'processing':
+                    continue
+            if status == 'complete_with_errors' or status == 'failed':
+                messagelist = []
+                print('Error messages:')
+                for message in loop_root.findall("./processInfo/"):
+                    print(message.text)
+                    messagelist.append(message.text)
+        # Download zipped order if status is complete or complete_with_errors
+            if status == 'complete' or status == 'complete_with_errors':
+                downloadURL = 'https://n5eil02u.ecs.nsidc.org/esir/' + orderID + '.zip'
+                print('Downloading file...')
+                zip_response = capability_session.get(downloadURL)
+                zip_response.raise_for_status()
+                fz = open(f'{dl_path}/{city_name}_{page_val}.zip', 'wb')
+                fz.write(zip_response.content)
+                fz.close()
+                print('Download complete.')
+            else:
+                print('Request failed.')
+    else:
+        for i in range(page_num):
+            page_val = i + 1
+            param_dict['page_num'] = page_val
+            request = capability_session.get(base_url, params=param_dict)
+            request.raise_for_status()
+            fz = open(f'{dl_path}/{city_name}_{page_val}.zip', 'wb')
+            fz.write(request.content)
+            fz.close()
+
+
+# def download_icesat2(df_city,token,error_log_file,version=5):
+#     #Given lon/lat extents in a Pandas DataFrame (df_city),
+#     #downloads ICESat-2 ATL03 geolocated photons
+#     city_name = df_city.city
+#     t_start = df_city.t_start
+#     t_end = df_city.t_end
+#     t_start_valid = validate_date(t_start)
+#     t_end_valid = validate_date(t_end)
+#     lon_min_str = str(df_city.lon_min)
+#     lon_max_str = str(df_city.lon_max)
+#     lat_min_str = str(df_city.lat_min)
+#     lat_max_str = str(df_city.lat_max)
+#     token_command = 'token='+token
+#     site_command = 'https://n5eil02u.ecs.nsidc.org/egi/request?'
+#     email_command = 'email=false'
+#     short_name = 'ATL03'
+#     coverage_command = 'coverage='
+#     beam_list = ['1l','1r','2l','2r','3l','3r']
+#     for beam in beam_list:
+#         coverage_command = coverage_command + cat_str_API(beam)
+#     coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
+#     short_name_command = f'short_name={short_name}&version={version:03d}'
+#     if t_start_valid == True:
+#         t_start = datetime.datetime.strptime(t_start,'%Y-%m-%d').strftime('%Y-%m-%d')
+#     else:
+#         t_start = '2018-10-01'
+
+#     if t_end_valid == True:
+#         t_end = datetime.datetime.strptime(t_end,'%Y-%m-%d').strftime('%Y-%m-%d')
+#     else:
+#         t_end = datetime.datetime.now().strftime('%Y-%m-%d')
+
+#     if np.logical_and(t_start_valid==False,t_end_valid==False):
+#         time_command = ''
+#     else:
+#         time_command = 'time='+t_start+'T00:00:00,'+t_end+'T23:59:59&'
+#     bounding_box_command = 'bounding_box='+lon_min_str+','+lat_min_str+','+lon_max_str+','+lat_max_str
+#     bbox_command = 'bbox='+lon_min_str+','+lat_min_str+','+lon_max_str+','+lat_max_str
+#     shape_command = bounding_box_command + '&' + bbox_command + '&'
+#     page_number = 1
+#     page_condition = True
+#     while page_condition:
+#         page_command = 'page_num='+str(page_number)
+#         full_command = 'curl -O -J -k --dump-header response-header.txt \"' + \
+#             site_command + '&' + short_name_command + '&' + token_command + '&' + \
+#             email_command + '&' + shape_command + time_command + \
+#             coverage_command + '&' + page_command + '\"'
+#         subprocess.run(full_command,shell=True)
+#         with open('response-header.txt','r') as f2:
+#             response_line = f2.readline().replace('\n','')
+#         if response_line[9:12] == '200':
+#             page_number = page_number + 1
+#         elif response_line[9:12] == '204':
+#             print('End of download.')
+#             page_condition = False
+#         elif response_line[9:12] == '501':
+#             page_condition = False
+#         else:
+#             print('Something bad happened.')
+#             print('Exiting...')
+#             page_condition = False
+#     if page_number == 1:
+#         print('Nothing was downloaded.')
+#         print('Check extents - possibly no coverage!')
+#         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+#         with open(error_log_file,'a') as text_file:
+#             text_file.write(now_str + ': ' + city_name + ' - No data download.\n')
+#             print('No data downloaded!')
+#         return 0
+#     else:
+#         return None
 
 def landmask_icesat2(lon,lat,lon_coast,lat_coast,landmask_c_file,inside_flag):
     '''

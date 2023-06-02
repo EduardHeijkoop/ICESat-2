@@ -40,6 +40,7 @@ def main():
     parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
     parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
+    parser.add_argument('--version',default=5,type=int,help='Which version to download.')
     args = parser.parse_args()
     machine_name = args.machine
     copernicus_flag = args.copernicus
@@ -49,6 +50,7 @@ def main():
     weak_flag = args.weak
     sigma_flag = args.sigma
     N_cpus = args.N_cpus
+    version = args.version
 
     # SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
     # landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
@@ -119,7 +121,7 @@ def main():
         bbox_code = create_bbox(icesat2_dir,df_extents.iloc[i])
         if bbox_code is not None:
             continue
-        download_code = download_icesat2(df_extents.iloc[i],token,error_log_file,version=5)
+        download_code = download_icesat2(df_extents.iloc[i],token,error_log_file,version)
         if download_code is not None:
             continue
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
