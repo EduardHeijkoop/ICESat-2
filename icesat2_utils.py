@@ -164,9 +164,13 @@ def move_icesat2(icesat2_dir,df_city,sync_async_code):
     city_dir = f'{icesat2_dir}{city_name}/'
     subprocess.run(f'mv *zip {city_dir}',shell=True)
     subprocess.run(f'unzip -q \'{city_dir}*zip\' -d {city_dir}',shell=True)
+    subprocess.run(f'mv {city_dir}*/processed_ATL03*h5 {city_dir}',shell=True)
     [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
     subprocess.run(f'rm {city_dir}*zip',shell=True)
-    subprocess.run(f'rm {city_dir}README',shell=True)
+    if sync_async_code == 'async':
+        subprocess.run(f'rm {city_dir}README',shell=True)
+    elif sync_async_code == 'sync':
+        subprocess.run(f'rm {city_dir}request*.json',shell=True)
     subprocess.run(f'find {city_dir}*h5 -printf "%f\\n" > {city_dir}icesat2_list.txt',shell=True)
     return None
 
