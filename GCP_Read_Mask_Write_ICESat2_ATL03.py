@@ -122,7 +122,7 @@ def main():
         if bbox_code is not None:
             continue
         sync_async_code = download_icesat2(user,pw,df_extents.iloc[i],version)
-        if sync_async_code is not None:
+        if sync_async_code is None:
             continue
         '''
         Add some filter when nothing has been downloaded.

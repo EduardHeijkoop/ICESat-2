@@ -417,7 +417,6 @@ def download_icesat2(user,pw,df_city,version):
                 fz = open(f'{dl_path}/{city_name}_{page_val}.zip', 'wb')
                 fz.write(zip_response.content)
                 fz.close()
-                print('Download complete.')
             else:
                 print('Request failed.')
     else:
@@ -430,7 +429,7 @@ def download_icesat2(user,pw,df_city,version):
             fz = open(f'{dl_path}/{city_name}_{page_val}.zip', 'wb')
             fz.write(request.content)
             fz.close()
-        print('Download complete.')
+    print('Download complete.')
 
     return sync_async_code
 
