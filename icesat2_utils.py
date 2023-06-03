@@ -162,15 +162,13 @@ def move_icesat2(icesat2_dir,df_city):
     create icesat2_list.txt file with list of .h5 files 
     '''
     city_name = df_city.city
-    subprocess.run('mv *zip ' + icesat2_dir+city_name + '/',shell=True)
-    subprocess.run('mv *h5 ' + icesat2_dir+city_name + '/',shell=True)
-    # subprocess.run('rm response-header.txt',shell=True)
-    subprocess.run('unzip \'' + icesat2_dir+city_name + '/*zip\' -d ' + icesat2_dir+city_name + '/',shell=True)
-    subprocess.run('mv ' + icesat2_dir+city_name + '/*/processed*.h5 ' + icesat2_dir+city_name+ '/',shell=True)
+    city_dir = f'{icesat2_dir}{city_name}/'
+    subprocess.run(f'mv *zip {city_dir}',shell=True)
+    subprocess.run(f'unzip -q \'{city_dir}*zip\' -d {city_dir}',shell=True)
     [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
-    subprocess.run('rm ' + icesat2_dir + city_name + '/*.json',shell=True)
-    subprocess.run('rm ' + icesat2_dir+city_name + '/*zip',shell=True)
-    subprocess.run('find ' + icesat2_dir+city_name + '/*h5 -printf "%f\\'+'n" > ' + icesat2_dir+city_name + '/icesat2_list.txt',shell=True)
+    subprocess.run(f'rm {city_dir}*zip',shell=True)
+    subprocess.run(f'rm {city_dir}README',shell=True)
+    subprocess.run(f'find {city_dir}*h5 -printf "%f\\n" > {city_dir}icesat2_list.txt',shell=True)
     return None
 
 
@@ -410,7 +408,7 @@ def download_icesat2(user,pw,df_city,version):
         # Download zipped order if status is complete or complete_with_errors
             if status == 'complete' or status == 'complete_with_errors':
                 downloadURL = 'https://n5eil02u.ecs.nsidc.org/esir/' + orderID + '.zip'
-                print('Downloading file...')
+                print(f'Downloading file {page_val}...')
                 zip_response = capability_session.get(downloadURL)
                 zip_response.raise_for_status()
                 fz = open(f'{dl_path}/{city_name}_{page_val}.zip', 'wb')
@@ -422,12 +420,14 @@ def download_icesat2(user,pw,df_city,version):
     else:
         for i in range(page_num):
             page_val = i + 1
+            print(f'Downloading file {page_val}...')
             param_dict['page_num'] = page_val
             request = capability_session.get(base_url, params=param_dict)
             request.raise_for_status()
             fz = open(f'{dl_path}/{city_name}_{page_val}.zip', 'wb')
             fz.write(request.content)
             fz.close()
+        print('Download complete.')
 
 
 # def download_icesat2(df_city,token,error_log_file,version=5):
