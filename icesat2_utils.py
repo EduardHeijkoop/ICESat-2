@@ -15,7 +15,6 @@ import itertools
 import multiprocessing
 import json
 import requests
-import re
 import time
 import sys
 
@@ -153,7 +152,7 @@ def cleanup():
         subprocess.run('rm error.xml',shell=True)
     return None
 
-def move_icesat2(icesat2_dir,df_city):
+def move_icesat2(icesat2_dir,df_city,sync_async_code):
     '''
     move .zip files that are downloaded by the download_icesat2 function to the correct directory
     unzip them there and put all .h5 files in that directory
@@ -299,6 +298,7 @@ def download_icesat2(user,pw,df_city,version):
             break
         granules.extend(results['feed']['entry'])
         search_params['page_num'] += 1
+    granules = [granule for granule in granules if f'SC:ATL03.{version_str}' in granule['title']]
     print(f'There are {len(granules)} granules of {short_name} over {city_name}.')
 
     # granule_sizes = [float(granule['granule_size']) for granule in granules]
@@ -327,11 +327,13 @@ def download_icesat2(user,pw,df_city,version):
 
     if len(granules) > N_sync:
         request_mode = 'async'
-        page_size = N_async
+        page_size = 100 #for some reason higher values will not download all data (more recent files will be excluded)
+        sync_async_code = 'async'
         print('Going for asynchronous request.')
     else:
         request_mode = 'stream'
         page_size = N_sync
+        sync_async_code = 'sync'
         print('Going for synchronous request.')
     page_num = int(np.ceil(len(granules)/page_size))
 
@@ -380,7 +382,7 @@ def download_icesat2(user,pw,df_city,version):
             for status in request_root.findall("./requestStatus/"):
                 statuslist.append(status.text)
             status = statuslist[0]
-            print('Processing at NSIDC...')
+            print(f'Processing {page_val}/{page_num} at NSIDC...')
             symbol_count = -1
             while status == 'pending' or status == 'processing': 
                 symbol_count += 1
@@ -405,10 +407,11 @@ def download_icesat2(user,pw,df_city,version):
                 for message in loop_root.findall("./processInfo/"):
                     print(message.text)
                     messagelist.append(message.text)
+            print('\n')
         # Download zipped order if status is complete or complete_with_errors
             if status == 'complete' or status == 'complete_with_errors':
                 downloadURL = 'https://n5eil02u.ecs.nsidc.org/esir/' + orderID + '.zip'
-                print(f'Downloading file {page_val}...')
+                print(f'Downloading file {page_val}/{page_num}...')
                 zip_response = capability_session.get(downloadURL)
                 zip_response.raise_for_status()
                 fz = open(f'{dl_path}/{city_name}_{page_val}.zip', 'wb')
@@ -420,7 +423,7 @@ def download_icesat2(user,pw,df_city,version):
     else:
         for i in range(page_num):
             page_val = i + 1
-            print(f'Downloading file {page_val}...')
+            print(f'Downloading file {page_val}/{page_num}...')
             param_dict['page_num'] = page_val
             request = capability_session.get(base_url, params=param_dict)
             request.raise_for_status()
@@ -429,6 +432,7 @@ def download_icesat2(user,pw,df_city,version):
             fz.close()
         print('Download complete.')
 
+    return sync_async_code
 
 # def download_icesat2(df_city,token,error_log_file,version=5):
 #     #Given lon/lat extents in a Pandas DataFrame (df_city),

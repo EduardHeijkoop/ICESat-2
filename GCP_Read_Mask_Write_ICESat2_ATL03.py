@@ -121,10 +121,13 @@ def main():
         bbox_code = create_bbox(icesat2_dir,df_extents.iloc[i])
         if bbox_code is not None:
             continue
-        download_code = download_icesat2(user,pw,df_extents.iloc[i],version)
-        if download_code is not None:
+        sync_async_code = download_icesat2(user,pw,df_extents.iloc[i],version)
+        if sync_async_code is not None:
             continue
-        move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
+        '''
+        Add some filter when nothing has been downloaded.
+        '''
+        move_code = move_icesat2(icesat2_dir,df_extents.iloc[i],sync_async_code)
         if move_code is not None:
             continue
         lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag)
