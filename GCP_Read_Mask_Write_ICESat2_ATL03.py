@@ -142,6 +142,8 @@ def main():
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked.txt'
             if beam_flag == True:
                 beam_high_conf = beam_high_conf[landmask]
+            if sigma_flag == True:
+                sigma_high_conf = sigma_high_conf[landmask]
         else:
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf.txt'
         utc_time_high_conf = gps2utc(delta_time_total_high_conf)
