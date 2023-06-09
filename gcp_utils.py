@@ -118,11 +118,11 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
 
     return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_h_high_conf
 
-def copernicus_filter_icesat2(lon,lat,icesat2_file,icesat2_dir,city_name,copernicus_threshold,egm2008_file):
-    lon_min = np.nanmin(lon)
-    lon_max = np.nanmax(lon)
-    lat_min = np.nanmin(lat)
-    lat_max = np.nanmax(lat)
+def copernicus_filter_icesat2(lon,lat,icesat2_file,icesat2_dir,city_name,copernicus_threshold,egm2008_file,buffer=0.01):
+    lon_min = np.nanmin(lon) - buffer
+    lon_max = np.nanmax(lon) + buffer
+    lat_min = np.nanmin(lat) - buffer
+    lat_max = np.nanmax(lat) + buffer
     output_dir = f'{icesat2_dir}{city_name}/'
     copernicus_wgs84_file = f'{output_dir}{city_name}_Copernicus_WGS84.tif'
     download_copernicus(lon_min,lon_max,lat_min,lat_max,egm2008_file,output_dir,copernicus_wgs84_file)
