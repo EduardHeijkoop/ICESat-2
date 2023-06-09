@@ -72,7 +72,7 @@ def main():
     user = config.get('GENERAL','user') #Your NASA EarthData username
     pw = getpass.getpass('NASA EarthData password:') #Your NASA EarthData password
     if copernicus_flag:
-        copernicus_threshold = config.getfloat('GCP_CONSTANTS','Copernicus_Threshold') #set your SRTM threshold here
+        copernicus_threshold = config.getfloat('GCP_CONSTANTS','Copernicus_Threshold') #set your copernicus threshold here
         copernicus_threshold_str = str(copernicus_threshold).replace('.','p') #replace decimal point with p for file name
         EGM2008_path = config.get('GCP_PATHS','EGM2008_path') #supplied on github
 
@@ -174,39 +174,39 @@ def main():
         
         if copernicus_flag == True:
             copernicus_cond = copernicus_filter_icesat2(lon_high_conf,lat_high_conf,icesat2_file,icesat2_dir,city_name,copernicus_threshold,EGM2008_path)
-            lon_high_conf_SRTM = lon_high_conf[copernicus_cond]
-            lat_high_conf_SRTM = lat_high_conf[copernicus_cond]
-            h_high_conf_SRTM = h_high_conf[copernicus_cond]
-            delta_time_total_high_conf_SRTM = delta_time_total_high_conf[copernicus_cond]
+            lon_high_conf_copernicus = lon_high_conf[copernicus_cond]
+            lat_high_conf_copernicus = lat_high_conf[copernicus_cond]
+            h_high_conf_copernicus = h_high_conf[copernicus_cond]
+            delta_time_total_high_conf_copernicus = delta_time_total_high_conf[copernicus_cond]
             if landmask_flag:
-                icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked_SRTM_filtered_threshold_{copernicus_threshold_str}_m.txt'
+                icesat2_copernicus_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked_copernicus_filtered_threshold_{copernicus_threshold_str}_m.txt'
             else:
-                icesat2_srtm_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_SRTM_filtered_threshold_{copernicus_threshold_str}_m.txt'
+                icesat2_copernicus_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_copernicus_filtered_threshold_{copernicus_threshold_str}_m.txt'
             if weak_flag == True:
-                icesat2_srtm_file = icesat2_srtm_file.replace('_high_conf','_high_conf_weak')
-            file_list_srtm = [icesat2_srtm_file]
-            np.savetxt(icesat2_srtm_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf_SRTM,lat_high_conf_SRTM,h_high_conf_SRTM],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
+                icesat2_copernicus_file = icesat2_copernicus_file.replace('_high_conf','_high_conf_weak')
+            file_list_copernicus = [icesat2_copernicus_file]
+            np.savetxt(icesat2_copernicus_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf_copernicus,lat_high_conf_copernicus,h_high_conf_copernicus],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
             if timestamp_flag == True:
-                utc_time_high_conf_SRTM = gps2utc(delta_time_total_high_conf_SRTM)
-                icesat2_srtm_time_file = icesat2_srtm_file.replace('.txt','_time.txt')
-                file_list_srtm.append(icesat2_srtm_time_file)
-                np.savetxt(icesat2_srtm_time_file,utc_time_high_conf_SRTM.astype(object),fmt='%s',delimiter=',',header='time',comments='')
+                utc_time_high_conf_copernicus = gps2utc(delta_time_total_high_conf_copernicus)
+                icesat2_copernicus_time_file = icesat2_copernicus_file.replace('.txt','_time.txt')
+                file_list_copernicus.append(icesat2_copernicus_time_file)
+                np.savetxt(icesat2_copernicus_time_file,utc_time_high_conf_copernicus.astype(object),fmt='%s',delimiter=',',header='time',comments='')
             if beam_flag == True:
-                beam_high_conf_SRTM = beam_high_conf[copernicus_cond]
-                icesat2_srtm_beam_file = icesat2_srtm_file.replace('.txt','_beam.txt')
-                file_list_srtm.append(icesat2_srtm_beam_file)
-                np.savetxt(icesat2_srtm_beam_file,beam_high_conf_SRTM.astype(object),fmt='%s',delimiter=',',header='beam',comments='')
+                beam_high_conf_copernicus = beam_high_conf[copernicus_cond]
+                icesat2_copernicus_beam_file = icesat2_copernicus_file.replace('.txt','_beam.txt')
+                file_list_copernicus.append(icesat2_copernicus_beam_file)
+                np.savetxt(icesat2_copernicus_beam_file,beam_high_conf_copernicus.astype(object),fmt='%s',delimiter=',',header='beam',comments='')
             if sigma_flag == True:
-                sigma_high_conf_SRTM = sigma_high_conf[copernicus_cond]
-                icesat2_srtm_sigma_file = icesat2_srtm_file.replace('.txt','_sigma.txt')
-                file_list_srtm.append(icesat2_srtm_sigma_file)
-                np.savetxt(icesat2_srtm_sigma_file,sigma_high_conf_SRTM,fmt='%.6f',delimiter=',',header='sigma',comments='')
+                sigma_high_conf_copernicus = sigma_high_conf[copernicus_cond]
+                icesat2_copernicus_sigma_file = icesat2_copernicus_file.replace('.txt','_sigma.txt')
+                file_list_copernicus.append(icesat2_copernicus_sigma_file)
+                np.savetxt(icesat2_copernicus_sigma_file,sigma_high_conf_copernicus,fmt='%.6f',delimiter=',',header='sigma',comments='')
 
-            if len(file_list_srtm) > 1:
-                tmp_file = icesat2_srtm_file.replace('.txt','_tmp.txt')
-                paste_command = f'paste -d , {" ".join(file_list_srtm)} > {tmp_file}'
-                move_command = f'mv {tmp_file} {icesat2_srtm_file}'
-                rm_command = f'rm {" ".join(file_list_srtm[1:])}'
+            if len(file_list_copernicus) > 1:
+                tmp_file = icesat2_copernicus_file.replace('.txt','_tmp.txt')
+                paste_command = f'paste -d , {" ".join(file_list_copernicus)} > {tmp_file}'
+                move_command = f'mv {tmp_file} {icesat2_copernicus_file}'
+                rm_command = f'rm {" ".join(file_list_copernicus[1:])}'
                 subprocess.run(paste_command,shell=True)
                 subprocess.run(move_command,shell=True)
                 subprocess.run(rm_command,shell=True)
