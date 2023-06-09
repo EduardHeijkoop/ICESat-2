@@ -118,7 +118,7 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
 
     return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_h_high_conf
 
-def copernicus_filter_icesat2(lon,lat,icesat2_file,icesat2_dir,city_name,copernicus_threshold,egm2008_file,buffer=0.01):
+def copernicus_filter_icesat2(lon,lat,icesat2_file,icesat2_dir,city_name,copernicus_threshold,egm2008_file,buffer=0.01,keep_files_flag=False):
     lon_min = np.nanmin(lon) - buffer
     lon_max = np.nanmax(lon) + buffer
     lat_min = np.nanmin(lat) - buffer
@@ -133,6 +133,9 @@ def copernicus_filter_icesat2(lon,lat,icesat2_file,icesat2_dir,city_name,coperni
     df_copernicus = pd.read_csv(copernicus_sampled_file)
     df_copernicus['dh'] = df_copernicus.height_copernicus - df_copernicus.height_icesat2
     copernicus_cond = np.asarray(np.abs(df_copernicus.dh) < copernicus_threshold)
+    if keep_files_flag == False:
+        subprocess.run(copernicus_wgs84_file,shell=True)
+        subprocess.run(copernicus_sampled_file,shell=True)
     return copernicus_cond
 
 def get_copernicus_tiles(lon_min,lon_max,lat_min,lat_max):

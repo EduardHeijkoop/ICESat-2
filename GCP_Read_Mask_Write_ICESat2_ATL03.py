@@ -33,7 +33,6 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--machine',default='b',help='Machine to run on.',choices=['t','b','local'])
-    parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
     parser.add_argument('--landmask',action='store_true',default=False,help='Toggle to mask photons over land/water.')
     parser.add_argument('--time',action='store_true',default=False,help='Toggle to print timestamps.')
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
@@ -41,9 +40,10 @@ def main():
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
     parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
     parser.add_argument('--version',default=5,type=int,help='Which version to download.')
+    parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
+    parser.add_argument('--keep_files',action='store_true',default=False,help='Toggle to keep Copernicus DEM files.')
     args = parser.parse_args()
     machine_name = args.machine
-    copernicus_flag = args.copernicus
     landmask_flag = args.landmask
     timestamp_flag = args.time
     beam_flag = args.beams
@@ -51,6 +51,8 @@ def main():
     sigma_flag = args.sigma
     N_cpus = args.N_cpus
     version = args.version
+    copernicus_flag = args.copernicus
+    keep_files_flag = args.keep_files
 
     # SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
     # landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
@@ -175,7 +177,7 @@ def main():
             subprocess.run(rm_command,shell=True)
         
         if copernicus_flag == True:
-            copernicus_cond = copernicus_filter_icesat2(lon_high_conf,lat_high_conf,icesat2_file,icesat2_dir,city_name,copernicus_threshold,EGM2008_path)
+            copernicus_cond = copernicus_filter_icesat2(lon_high_conf,lat_high_conf,icesat2_file,icesat2_dir,city_name,copernicus_threshold,EGM2008_path,keep_files_flag=keep_files_flag)
             lon_high_conf_copernicus = lon_high_conf[copernicus_cond]
             lat_high_conf_copernicus = lat_high_conf[copernicus_cond]
             h_high_conf_copernicus = h_high_conf[copernicus_cond]
@@ -187,7 +189,7 @@ def main():
             if weak_flag == True:
                 icesat2_copernicus_file = icesat2_copernicus_file.replace('_high_conf','_high_conf_weak')
             file_list_copernicus = [icesat2_copernicus_file]
-            np.savetxt(icesat2_copernicus_file.replace('.txt','_beam.txt'),np.c_[lon_high_conf_copernicus,lat_high_conf_copernicus,h_high_conf_copernicus],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
+            np.savetxt(icesat2_copernicus_file,np.c_[lon_high_conf_copernicus,lat_high_conf_copernicus,h_high_conf_copernicus],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
             if timestamp_flag == True:
                 utc_time_high_conf_copernicus = gps2utc(delta_time_total_high_conf_copernicus)
                 icesat2_copernicus_time_file = icesat2_copernicus_file.replace('.txt','_time.txt')
