@@ -71,7 +71,7 @@ def main():
     landmask_c_file = config.get('GENERAL_PATHS','landmask_c_file') #file with C function pnpoly, "point in polygon", to perform landmask
     landmask_inside_flag = config.getint('GCP_CONSTANTS','landmask_inside_flag') #flag to find points inside (1) or outside (0) polygon
 
-    user = config.get('GENERAL','user') #Your NASA EarthData username
+    user = config.get('GENERAL_CONSTANTS','earthdata_username') #Your NASA EarthData username
     pw = getpass.getpass('NASA EarthData password:') #Your NASA EarthData password
     if copernicus_flag:
         copernicus_threshold = config.getfloat('GCP_CONSTANTS','Copernicus_Threshold') #set your copernicus threshold here
