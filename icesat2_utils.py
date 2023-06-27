@@ -23,6 +23,7 @@ def get_lonlat_shp(shp_path):
     Given a shapefile (.shp), returns longitude and latitude arrays
     of all individual polygons, separated by NaNs
     Polygons within polygons will be included here
+    Deprecated as of shapely version 2.0
     '''
     shp = gpd.read_file(shp_path)
     lon_coast = np.empty([0,1],dtype=float)
@@ -58,6 +59,61 @@ def get_lonlat_shp(shp_path):
             lat_coast = np.append(lat_coast,tmp[1,:])
             lat_coast = np.append(lat_coast,np.nan)
     return lon_coast, lat_coast
+
+def get_lonlat_geometry(geom):
+    '''
+    Returns lon/lat of all exteriors and interiors of a Shapely geomery:
+        -Polygon
+        -MultiPolygon
+        -GeometryCollection
+    '''
+    lon = np.empty([0,1],dtype=float)
+    lat = np.empty([0,1],dtype=float)
+    if geom.geom_type == 'Polygon':
+        lon_geom,lat_geom = get_lonlat_polygon(geom)
+        lon = np.append(lon,lon_geom)
+        lat = np.append(lat,lat_geom)
+    elif geom.geom_type == 'MultiPolygon':
+        polygon_list = [p for p in geom.geoms if p.geom_type == 'Polygon']
+        for polygon in polygon_list:
+            lon_geom,lat_geom = get_lonlat_polygon(polygon)
+            lon = np.append(lon,lon_geom)
+            lat = np.append(lat,lat_geom)
+    elif geom.geom_type == 'GeometryCollection':
+        polygon_list = [p for p in geom.geoms if p.geom_type == 'Polygon']
+        for polygon in polygon_list:
+            lon_geom,lat_geom = get_lonlat_polygon(polygon)
+            lon = np.append(lon,lon_geom)
+            lat = np.append(lat,lat_geom)
+    return lon,lat
+
+def get_lonlat_polygon(polygon):
+    lon = np.empty([0,1],dtype=float)
+    lat = np.empty([0,1],dtype=float)
+    exterior_xy = np.asarray(polygon.exterior.xy)
+    lon = np.append(lon,exterior_xy[0,:])
+    lon = np.append(lon,np.nan)
+    lat = np.append(lat,exterior_xy[1,:])
+    lat = np.append(lat,np.nan)
+    for interior in polygon.interiors:
+        interior_xy = np.asarray(interior.coords.xy)
+        lon = np.append(lon,interior_xy[0,:])
+        lon = np.append(lon,np.nan)
+        lat = np.append(lat,interior_xy[1,:])
+        lat = np.append(lat,np.nan)
+    return lon,lat
+
+def get_lonlat_gdf(gdf):
+    '''
+    Returns lon/lat of all exteriors and interiors of a GeoDataFrame.
+    '''
+    lon = np.empty([0,1],dtype=float)
+    lat = np.empty([0,1],dtype=float)
+    for geom in gdf.geometry:
+        lon_geom,lat_geom = get_lonlat_geometry(geom)
+        lon = np.append(lon,lon_geom)
+        lat = np.append(lat,lat_geom)
+    return lon,lat
 
 def great_circle_distance(lon1,lat1,lon2,lat2,R=6378137.0):
     lon1 = deg2rad(lon1)
@@ -167,9 +223,9 @@ def move_icesat2(icesat2_dir,df_city,sync_async_code):
     subprocess.run(f'mv {city_dir}*/processed_ATL03*h5 {city_dir}',shell=True)
     [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
     subprocess.run(f'rm {city_dir}*zip',shell=True)
-    if sync_async_code == 'async':
-        subprocess.run(f'rm {city_dir}README',shell=True)
-    elif sync_async_code == 'sync':
+    # if sync_async_code == 'async':
+    #     subprocess.run(f'rm {city_dir}README',shell=True)
+    if sync_async_code == 'sync':
         subprocess.run(f'rm {city_dir}request*.json',shell=True)
     subprocess.run(f'find {city_dir}*h5 -printf "%f\\n" > {city_dir}icesat2_list.txt',shell=True)
     return None
@@ -191,7 +247,7 @@ def get_osm_extents(df_city,osm_shp_path,icesat2_dir):
     shp_command = 'ogr2ogr ' + subset_shp + ' ' +  osm_shp_path + ' -clipsrc ' + extents_str
     subprocess.run(shp_command,shell=True)
     shp_data = gpd.read_file(subset_shp)
-    lon_coast,lat_coast = get_lonlat_shp(subset_shp)
+    lon_coast,lat_coast = get_lonlat_gdf(shp_data)
     return lon_coast,lat_coast,shp_data
 
 def validate_date(date_text):
