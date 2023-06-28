@@ -65,7 +65,7 @@ def main():
     # print(f'Timestamps     : {on_off_str[timestamp_toggle]}')
 
     input_file = config.get('GCP_PATHS','input_file') #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
-    osm_shp_path = config.get('GENERAL_PATHS','osm_shp_path') #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
+    osm_shp_file = config.get('GENERAL_PATHS','osm_shp_file') #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
     icesat2_dir = config.get('GCP_PATHS','icesat2_dir') #output directory, which will be populated by subdirectories named after your input
     error_log_file = config.get('GCP_PATHS','error_log_file') #file to write errors to
     landmask_c_file = config.get('GENERAL_PATHS','landmask_c_file') #file with C function pnpoly, "point in polygon", to perform landmask
@@ -79,13 +79,13 @@ def main():
         EGM2008_path = config.get('GCP_PATHS','EGM2008_path') #supplied on github
 
     if machine_name == 'b':
-        osm_shp_path = osm_shp_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+        osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
         if copernicus_flag:
             EGM2008_path = EGM2008_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/') 
     elif machine_name == 'local':
-        osm_shp_path = osm_shp_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
+        osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
         icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/','/media/heijkoop/DATA/')
         error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/','/media/heijkoop/DATA/')
         landmask_c_file = landmask_c_file.replace('/home/eheijkoop/Scripts/','/media/heijkoop/DATA/Dropbox/TU/PhD/Github/')
@@ -119,7 +119,7 @@ def main():
         print('Working on ' + city_name)
         if not os.path.isdir(icesat2_dir+city_name):
             os.mkdir(icesat2_dir + city_name)
-        lon_coast,lat_coast,shp_data = get_osm_extents(df_extents.iloc[i],osm_shp_path,icesat2_dir)
+        lon_coast,lat_coast,shp_data = get_osm_extents(df_extents.iloc[i],osm_shp_file,icesat2_dir)
         bbox_code = create_bbox(icesat2_dir,df_extents.iloc[i])
         if bbox_code is not None:
             continue
