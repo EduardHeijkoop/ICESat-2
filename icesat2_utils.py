@@ -208,7 +208,7 @@ def cleanup():
         subprocess.run('rm error.xml',shell=True)
     return None
 
-def move_icesat2(icesat2_dir,df_city,sync_async_code):
+def move_icesat2(icesat2_dir,df_city):
     '''
     move .zip files that are downloaded by the download_icesat2 function to the correct directory
     unzip them there and put all .h5 files in that directory
@@ -219,17 +219,19 @@ def move_icesat2(icesat2_dir,df_city,sync_async_code):
     city_name = df_city.city
     city_dir = f'{icesat2_dir}{city_name}/'
     subprocess.run(f'mv *zip {city_dir}',shell=True)
-    subprocess.run(f'unzip -q \'{city_dir}*zip\' -d {city_dir}',shell=True)
-    subprocess.run(f'mv {city_dir}*/processed_ATL03*h5 {city_dir}',shell=True)
-    [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
-    subprocess.run(f'rm {city_dir}*zip',shell=True)
-    # if sync_async_code == 'async':
-    #     subprocess.run(f'rm {city_dir}README',shell=True)
-    if sync_async_code == 'sync':
-        subprocess.run(f'rm {city_dir}request*.json',shell=True)
+    zip_list = sorted(glob.glob(f'{city_dir}*.zip'))
+    for zip_file in zip_list:
+        subprocess.run(f'unzip -q \'{zip_file}\'',shell=True)
+        subprocess.run(f'mv {city_dir}*/processed_ATL03*h5 {city_dir}',shell=True)
+        [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
+        subprocess.run(f'rm {zip_file}',shell=True)
+        if os.path.isfile(f'{city_dir}README'):
+            subprocess.run(f'rm {city_dir}README',shell=True)
+        json_list = sorted(glob.glob(f'{city_dir}request*.json'))
+        if len(json_list) > 0:
+            subprocess.run(f'rm {city_dir}request*.json',shell=True)
     subprocess.run(f'find {city_dir}*h5 -printf "%f\\n" > {city_dir}icesat2_list.txt',shell=True)
     return None
-
 
 def get_osm_extents(df_city,osm_shp_path,icesat2_dir):
     '''
