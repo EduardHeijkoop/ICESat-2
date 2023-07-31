@@ -39,7 +39,7 @@ def main():
     parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
     parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
-    parser.add_argument('--version',default=5,type=int,help='Which version to download.')
+    parser.add_argument('--version',default=6,type=int,help='Which version to download.')
     parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
     parser.add_argument('--keep_files',action='store_true',default=False,help='Toggle to keep Copernicus DEM files.')
     args = parser.parse_args()
