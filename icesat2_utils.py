@@ -221,7 +221,7 @@ def move_icesat2(icesat2_dir,df_city):
     subprocess.run(f'mv *zip {city_dir}',shell=True)
     zip_list = sorted(glob.glob(f'{city_dir}*.zip'))
     for zip_file in zip_list:
-        subprocess.run(f'unzip -q \'{zip_file}\'',shell=True)
+        subprocess.run(f'unzip -q \'{zip_file}\' -d {city_dir}',shell=True)
         subprocess.run(f'mv {city_dir}*/processed_ATL03*h5 {city_dir}',shell=True)
         [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
         subprocess.run(f'rm {zip_file}',shell=True)
