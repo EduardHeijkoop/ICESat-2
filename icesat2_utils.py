@@ -292,7 +292,7 @@ def cat_str_API(beam):
         (geophysical corrections') delta_time
     For all 3 strong beams
     '''
-    beam_command = f'/{beam}/heights/h_ph,/{beam}/heights/lon_ph,/{beam}/heights/lat_ph,/{beam}/heights/delta_time,/{beam}/heights/signal_conf_ph,/{beam}/heights/quality_ph,' \
+    beam_command = f'/{beam}/heights/h_ph,/{beam}/heights/lon_ph,/{beam}/heights/lat_ph,/{beam}/heights/delta_time,/{beam}/heights/signal_conf_ph,/{beam}/heights/quality_ph,/{beam}/heights/weight_ph,' \
         f'/{beam}/geolocation/reference_photon_lon,/{beam}/geolocation/reference_photon_lat,/{beam}/geolocation/ph_index_beg,/{beam}/geolocation/segment_ph_cnt,/{beam}/geolocation/reference_photon_index,' \
         f'/{beam}/geolocation/sigma_h,/{beam}/geolocation/sigma_lon,/{beam}/geolocation/sigma_lat,/{beam}/geolocation/podppd_flag,' \
         f'/{beam}/geophys_corr/delta_time,/{beam}/geophys_corr/tide_ocean,/{beam}/geophys_corr/dac,/{beam}/geophys_corr/tide_equilibrium,'

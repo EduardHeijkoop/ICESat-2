@@ -5,7 +5,7 @@ import os
 from osgeo import gdal,gdalconst,osr
 import pandas as pd
 
-def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True):
+def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True,weight_flag=False):
     '''
     Given a directory of downloaded ATL03 hdf5 files,
     reads them and writes the high confidence photons to a CSV as:
@@ -57,6 +57,11 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
             tmp_high_conf = tmp_signal_conf[:,0] == 4
             tmp_quality = np.asarray(atl03_file[f'/{beam}/heights/quality_ph'])
             tmp_high_quality = tmp_quality == 0
+            if weight_flag == True:
+                tmp_weight = np.asarray(atl03_file[f'/{beam}/heights/weight_ph'])/255.0
+                tmp_high_weight = tmp_weight > 0.8
+            else:
+                tmp_high_weight = np.ones(tmp_lon.shape,dtype=bool)
             if len(tmp_high_conf) < 100: #If fewer than 100 high confidence photons are in an hdf5 file, skip
                 continue
             tmp_ph_index_beg = np.asarray(atl03_file[f'/{beam}/geolocation/ph_index_beg']).squeeze()
@@ -76,7 +81,7 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
                 tmp_podppd_flag_full_ph[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = tmp_podppd_flag[i]
             tmp_idx_podppd = tmp_podppd_flag_full_ph == 0
             idx_nan = np.isnan(tmp_h)
-            idx_flags = np.all((tmp_high_conf,tmp_high_quality,tmp_idx_podppd,~idx_nan),axis=0)
+            idx_flags = np.all((tmp_high_conf,tmp_high_quality,tmp_high_weight,tmp_idx_podppd,~idx_nan),axis=0)
             tmp_lon_high_conf = tmp_lon[idx_flags]
             tmp_lat_high_conf = tmp_lat[idx_flags]
             tmp_h_high_conf = tmp_h[idx_flags]

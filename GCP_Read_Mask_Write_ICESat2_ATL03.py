@@ -38,6 +38,7 @@ def main():
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
     parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
+    parser.add_argument('--weight',action='store_true',default=False,help='Toggle to incorporate weight parameter.')
     parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
     parser.add_argument('--version',default=6,type=int,help='Which version to download.')
     parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
@@ -48,6 +49,7 @@ def main():
     timestamp_flag = args.time
     beam_flag = args.beams
     weak_flag = args.weak
+    weight_flag = args.weight
     sigma_flag = args.sigma
     N_cpus = args.N_cpus
     version = args.version
@@ -132,7 +134,7 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag)
+        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag,weight_flag)
         if len(lon_high_conf) == 0:
             continue
         if landmask_flag == True:
