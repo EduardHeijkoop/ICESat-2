@@ -343,7 +343,7 @@ def download_icesat2(user,pw,df_city,version):
         t_end_command = f'{year}-12-31'
         if year == t_start_year:
             t_start_command = t_start
-        elif year == t_end_year:
+        if year == t_end_year:
             t_end_command = t_end
         time_command = f'{t_start_command}T00:00:00Z,{t_end_command}T23:59:59Z'
         # if np.logical_and(t_start_valid==False,t_end_valid==False):
