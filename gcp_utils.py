@@ -44,25 +44,27 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
             Sometimes only one or two beams are present, this also prevents looking for those
             '''
             heights_check = False
-            heights_check = '/'+beam+'/heights' in atl03_file
+            heights_check = f'/{beam}/heights' in atl03_file
             if heights_check == False:
                 continue
-            tmp_lon = np.asarray(atl03_file['/'+beam+'/heights/lon_ph']).squeeze()
-            tmp_lat = np.asarray(atl03_file['/'+beam+'/heights/lat_ph']).squeeze()
-            tmp_h = np.asarray(atl03_file['/'+beam+'/heights/h_ph']).squeeze()
+            tmp_lon = np.asarray(atl03_file[f'/{beam}/heights/lon_ph']).squeeze()
+            tmp_lat = np.asarray(atl03_file[f'/{beam}/heights/lat_ph']).squeeze()
+            tmp_h = np.asarray(atl03_file[f'/{beam}/heights/h_ph']).squeeze()
             tmp_sdp = np.asarray(atl03_file['/ancillary_data/atlas_sdp_gps_epoch']).squeeze()
-            tmp_delta_time = np.asarray(atl03_file['/'+beam+'/heights/delta_time']).squeeze()
+            tmp_delta_time = np.asarray(atl03_file[f'/{beam}/heights/delta_time']).squeeze()
             tmp_delta_time_total = tmp_sdp + tmp_delta_time
-            tmp_signal_conf = np.asarray(atl03_file['/'+beam+'/heights/signal_conf_ph'])
+            tmp_signal_conf = np.asarray(atl03_file[f'/{beam}/heights/signal_conf_ph'])
             tmp_high_conf = tmp_signal_conf[:,0] == 4
+            tmp_quality = np.asarray(atl03_file[f'/{beam}/heights/quality_ph'])
+            tmp_high_quality = tmp_quality == 0
             if len(tmp_high_conf) < 100: #If fewer than 100 high confidence photons are in an hdf5 file, skip
                 continue
-            tmp_ph_index_beg = np.asarray(atl03_file['/'+beam+'/geolocation/ph_index_beg']).squeeze()
+            tmp_ph_index_beg = np.asarray(atl03_file[f'/{beam}/geolocation/ph_index_beg']).squeeze()
             tmp_ph_index_beg = tmp_ph_index_beg - 1
-            tmp_segment_ph_cnt = np.asarray(atl03_file['/'+beam+'/geolocation/segment_ph_cnt']).squeeze()
-            tmp_ref_ph_index = np.asarray(atl03_file['/'+beam+'/geolocation/reference_photon_index']).squeeze()
+            tmp_segment_ph_cnt = np.asarray(atl03_file[f'/{beam}/geolocation/segment_ph_cnt']).squeeze()
+            tmp_ref_ph_index = np.asarray(atl03_file[f'/{beam}/geolocation/reference_photon_index']).squeeze()
             tmp_ph_index_end = tmp_ph_index_beg + tmp_segment_ph_cnt
-            tmp_podppd_flag = np.asarray(atl03_file['/'+beam+'/geolocation/podppd_flag']).squeeze()
+            tmp_podppd_flag = np.asarray(atl03_file[f'/{beam}/geolocation/podppd_flag']).squeeze()
             idx_ref_ph = tmp_segment_ph_cnt>0 #no valid photons to "create" a ref photon -> revert back to reference ground track, which we don't want, so select segments with >0 photons
             tmp_ph_index_beg = tmp_ph_index_beg[idx_ref_ph]
             tmp_ph_index_end = tmp_ph_index_end[idx_ref_ph]
@@ -74,7 +76,7 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
                 tmp_podppd_flag_full_ph[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = tmp_podppd_flag[i]
             tmp_idx_podppd = tmp_podppd_flag_full_ph == 0
             idx_nan = np.isnan(tmp_h)
-            idx_flags = np.all((tmp_high_conf,tmp_idx_podppd,~idx_nan),axis=0)
+            idx_flags = np.all((tmp_high_conf,tmp_high_quality,tmp_idx_podppd,~idx_nan),axis=0)
             tmp_lon_high_conf = tmp_lon[idx_flags]
             tmp_lat_high_conf = tmp_lat[idx_flags]
             tmp_h_high_conf = tmp_h[idx_flags]
@@ -87,7 +89,7 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
                 tmp_beam_high_conf = np.repeat(beam,len(tmp_lon_high_conf))
                 beam_high_conf = np.append(beam_high_conf,tmp_beam_high_conf)
             if sigma_flag == True:
-                tmp_sigma_h = np.asarray(atl03_file['/'+beam+'/geolocation/sigma_h']).squeeze()
+                tmp_sigma_h = np.asarray(atl03_file[f'/{beam}/geolocation/sigma_h']).squeeze()
                 tmp_sigma_h = tmp_sigma_h[idx_ref_ph]
                 tmp_sigma_h_full_ph = np.zeros(tmp_lon.shape)
                 for i in range(len(tmp_ph_index_beg)):

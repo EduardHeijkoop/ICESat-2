@@ -286,16 +286,16 @@ def create_bbox(icesat2_dir,df_city):
 def cat_str_API(beam):
     '''
     Strings together hdf5 path for:
-        photon h/lon/lat/signal_conf
+        photon h/lon/lat/signal_conf/quality
         reference photon lon/lat/sigma_h/sigma_lon/sigma_lat
         ocean tide/DAC
         (geophysical corrections') delta_time
     For all 3 strong beams
     '''
-    beam_command = '/gt'+beam+'/heights/h_ph,/gt'+beam+'/heights/lon_ph,/gt'+beam+'/heights/lat_ph,/gt'+beam+'/heights/delta_time,/gt'+beam+'/heights/signal_conf_ph,' \
-        '/gt'+beam+'/geolocation/reference_photon_lon,/gt'+beam+'/geolocation/reference_photon_lat,/gt'+beam+'/geolocation/ph_index_beg,/gt'+beam+'/geolocation/segment_ph_cnt,/gt'+beam+'/geolocation/reference_photon_index,' \
-        '/gt'+beam+'/geolocation/sigma_h,/gt'+beam+'/geolocation/sigma_lon,/gt'+beam+'/geolocation/sigma_lat,/gt'+beam+'/geolocation/podppd_flag,' \
-        '/gt'+beam+'/geophys_corr/delta_time,/gt'+beam+'/geophys_corr/tide_ocean,/gt'+beam+'/geophys_corr/dac,/gt'+beam+'/geophys_corr/tide_equilibrium,'
+    beam_command = f'/{beam}/heights/h_ph,/{beam}/heights/lon_ph,/{beam}/heights/lat_ph,/{beam}/heights/delta_time,/{beam}/heights/signal_conf_ph,/{beam}/heights/quality_ph,' \
+        f'/{beam}/geolocation/reference_photon_lon,/{beam}/geolocation/reference_photon_lat,/{beam}/geolocation/ph_index_beg,/{beam}/geolocation/segment_ph_cnt,/{beam}/geolocation/reference_photon_index,' \
+        f'/{beam}/geolocation/sigma_h,/{beam}/geolocation/sigma_lon,/{beam}/geolocation/sigma_lat,/{beam}/geolocation/podppd_flag,' \
+        f'/{beam}/geophys_corr/delta_time,/{beam}/geophys_corr/tide_ocean,/{beam}/geophys_corr/dac,/{beam}/geophys_corr/tide_equilibrium,'
     return beam_command
 
 
@@ -352,7 +352,7 @@ def download_icesat2(user,pw,df_city,version):
         #     time_command = f'{t_start}T00:00:00Z,{t_end}T23:59:59Z'
         #Coverage in terms of variables you want to download.
         coverage_command = ''
-        beam_list = ['1l','1r','2l','2r','3l','3r']
+        beam_list = ['gt1l','gt1r','gt2l','gt2r','gt3l','gt3r']
         for beam in beam_list:
             coverage_command = coverage_command + cat_str_API(beam)
         coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
