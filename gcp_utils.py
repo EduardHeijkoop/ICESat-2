@@ -5,7 +5,7 @@ import os
 from osgeo import gdal,gdalconst,osr
 import pandas as pd
 
-def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True,weight_flag=False):
+def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True,weight_flag=False,fpb_flag=False):
     '''
     Given a directory of downloaded ATL03 hdf5 files,
     reads them and writes the high confidence photons to a CSV as:
@@ -88,7 +88,6 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
             tmp_delta_time_total_high_conf = tmp_delta_time_total[idx_flags]
             lon_high_conf = np.append(lon_high_conf,tmp_lon_high_conf)
             lat_high_conf = np.append(lat_high_conf,tmp_lat_high_conf)
-            h_high_conf = np.append(h_high_conf,tmp_h_high_conf)
             delta_time_total_high_conf = np.append(delta_time_total_high_conf,tmp_delta_time_total_high_conf)
             if beam_flag == True:
                 tmp_beam_high_conf = np.repeat(beam,len(tmp_lon_high_conf))
@@ -101,6 +100,16 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
                     tmp_sigma_h_full_ph[tmp_ph_index_beg[i]:tmp_ph_index_end[i]] = tmp_sigma_h[i]
                 tmp_sigma_h_high_conf = tmp_sigma_h_full_ph[idx_flags]
                 sigma_h_high_conf = np.append(sigma_h_high_conf,tmp_sigma_h_high_conf)
+            if fpb_flag == True:
+                tmp_dead_time = np.asarray(atl03_data[f'/ancillary_data/calibrations/dead_time/{beam}/dead_time']).squeeze()
+                tmp_dead_time_sigma = np.asarray(atl03_data[f'/ancillary_data/calibrations/dead_time/{beam}/sigma']).squeeze()
+                tmp_dead_time_avg = np.average(tmp_dead_time[:16],weights=1/tmp_dead_time_sigma[:16]**2)
+                tmp_ffb_corr_table = np.asarray(atl03_data[f'/ancillary_data/calibrations/first_photon_bias/{beam}/ffb_corr']).squeeze()
+                tmp_width_table = np.asarray(atl03_data[f'/ancillary_data/calibrations/first_photon_bias/{beam}/width']).squeeze()
+                tmp_strength_table = np.asarray(atl03_data[f'/ancillary_data/calibrations/first_photon_bias/{beam}/strength']).squeeze()
+                fpb_corr = compute_fpb(tmp_delta_time_total_high_conf,tmp_h_high_conf,tmp_ffb_corr_table,tmp_dead_time_avg,tmp_width_table,tmp_strength_table)
+                tmp_h_high_conf -= fpb_corr
+            h_high_conf = np.append(h_high_conf,tmp_h_high_conf)
 
     '''
     A lot of data will be captured off the coast that we don't want,
@@ -124,6 +133,30 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
         sigma_h_high_conf = None
 
     return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_h_high_conf
+
+def compute_fpb(delta_time,height,ffb_corr_table,dead_time_avg,width_table,strength_table,window=0.04):
+    '''
+    Computes first photon bias for ATL03
+    window defaults to 0.04, i.e. 400 shots
+    '''
+    dt = delta_time - delta_time[0]
+    dead_time_table = np.linspace(2.9,3.4,6)*1e-9
+    fpb_corr = np.zeros(len(dt))
+    dt_chunks = np.linspace(0,np.ceil(dt[-1]),int(np.ceil(dt[-1])/window)+1)
+    idx_X = np.argmin(np.abs(dead_time_table - dead_time_avg))
+    N_pulses = window*1e4
+    c_light = 299792458.0
+    for i in range(len(dt_chunks)-1):
+        idx_dt = np.logical_and(dt>=dt_chunks[i],dt<dt_chunks[i+1])
+        if np.sum(idx_dt) == 0:
+            continue
+        strength = np.sum(idx_dt) / N_pulses
+        dh = np.percentile(height[idx_dt],90) - np.percentile(height[idx_dt],10)
+        width = 1e9*dh/c_light
+        idx_Y = np.argmin(np.abs(strength_table - strength))
+        idx_Z = np.argmin(np.abs(width_table - width))
+        fpb_corr[idx_dt] = ffb_corr_table[idx_X,idx_Y,idx_Z]
+    return fpb_corr
 
 def copernicus_filter_icesat2(lon,lat,icesat2_file,icesat2_dir,city_name,copernicus_threshold,egm2008_file,buffer=0.01,keep_files_flag=False):
     lon_min = np.nanmin(lon) - buffer
