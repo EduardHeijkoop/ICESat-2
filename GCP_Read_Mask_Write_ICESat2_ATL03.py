@@ -37,10 +37,11 @@ def main():
     parser.add_argument('--landmask',action='store_true',default=False,help='Toggle to mask photons over land/water.')
     parser.add_argument('--time',action='store_true',default=False,help='Toggle to print timestamps.')
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
-    parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
     parser.add_argument('--all',action='store_true',default=False,help='Toggle to analyze all (strong & weak) beams.')
     parser.add_argument('--weight',action='store_true',default=False,help='Toggle to incorporate weight parameter.')
+    parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
+    parser.add_argument('--fpb',action='store_true',default=False,help='Toggle to incorporate first photon bias.')
     parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
     parser.add_argument('--version',default=6,type=int,help='Which version to download.')
     parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
@@ -54,6 +55,7 @@ def main():
     all_flag = args.all
     weight_flag = args.weight
     sigma_flag = args.sigma
+    fpb_flag = args.fpb
     N_cpus = args.N_cpus
     version = args.version
     copernicus_flag = args.copernicus
@@ -131,7 +133,7 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag,weight_flag,all_flag)
+        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag,weight_flag,fpb_flag,all_flag)
         if all_flag == True:
             sc_orient = delta_time_to_orientation(delta_time_total_high_conf)
             strength_high_conf = beam_orientation_to_strength(beam_high_conf,sc_orient)
