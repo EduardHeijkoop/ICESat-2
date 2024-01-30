@@ -5,7 +5,7 @@ import os
 from osgeo import gdal,gdalconst,osr
 import pandas as pd
 
-def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True,weight_flag=False,fpb_flag=False):
+def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True,weight_flag=False,fpb_flag=False,all_flag=False):
     '''
     Given a directory of downloaded ATL03 hdf5 files,
     reads them and writes the high confidence photons to a CSV as:
@@ -38,6 +38,8 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
             beam_list_req = beam_list_l
         elif sc_orient == 2:
             continue
+        if all_flag == True:
+            beam_list_req = beam_list_l + beam_list_r
         for beam in beam_list_req:
             '''
             Some beams don't actually have any height data in them, so this is done to skip those

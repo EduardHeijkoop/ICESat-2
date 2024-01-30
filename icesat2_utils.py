@@ -17,6 +17,7 @@ import json
 import requests
 import time
 import sys
+import itertools
 
 def get_lonlat_shp(shp_path):
     '''
@@ -134,12 +135,25 @@ def gps2utc(gps_time):
     '''
     Converts GPS time that ICESat-2 references to UTC
     '''
+    gps_time = np.atleast_1d(gps_time)
     t0 = datetime.datetime(1980,1,6,0,0,0,0)
     leap_seconds = -18 #applicable to everything after 2017-01-01, UTC is currently 18 s behind GPS
     dt = (gps_time + leap_seconds) * datetime.timedelta(seconds=1)
     utc_time = t0+dt
     utc_time_str = np.asarray([str(x) for x in utc_time])
     return utc_time_str
+
+def utc2gps(utc_time_str):
+    '''
+    Converts UTC time to GPS time that ICESat-2 references
+    '''
+    utc_time_str = np.atleast_1d(utc_time_str)
+    t0 = datetime.datetime(1980,1,6,0,0,0,0)
+    leap_seconds = -18 #applicable to everything after 2017-01-01, UTC is currently 18 s behind GPS
+    utc_time = np.asarray([datetime.datetime.strptime(x,'%Y-%m-%d %H:%M:%S.%f') for x in utc_time_str])
+    gps_time_datetime = utc_time - leap_seconds*datetime.timedelta(seconds=1)
+    gps_time = np.asarray([(x-t0).total_seconds() for x in gps_time_datetime])
+    return gps_time
 
 def get_token(user):
     '''
@@ -731,3 +745,51 @@ def SRTM_filter_icesat2(lon,lat,h,icesat2_file,icesat2_dir,df_city,user,pw,SRTM_
     subprocess.run(f'rm {SRTM_sampled_file}',shell=True)
     subprocess.run(f'rm {SRTM_wgs84_file}',shell=True)
     return SRTM_cond
+
+def delta_time_to_orientation(delta_time):
+    '''
+    Converts delta time array to array of orientations, i.e. forward or backwards
+    Will update as yaw maneuvers happen
+    '''
+    delta_time = np.atleast_1d(delta_time)
+    yaw_maneuvers = [datetime.datetime(2018,9,15,13,2,0),
+                    datetime.datetime(2018,12,28,18,53,8),
+                    datetime.datetime(2019,9,7,1,4,6),
+                    datetime.datetime(2020,5,14,1,49,3),
+                    datetime.datetime(2021,1,15,15,17,1),
+                    datetime.datetime(2021,10,2,2,20,1),
+                    datetime.datetime(2022,6,9,1,31,19),
+                    datetime.datetime(2023,2,9,16,59,14),
+                    datetime.datetime(2023,10,27,13,26,50)]
+    t0 = datetime.datetime(1980,1,6,0,0,0,0)
+    leap_seconds = -18
+    yaw_maneuvers_gps = np.asarray(yaw_maneuvers) - leap_seconds*datetime.timedelta(seconds=1)
+    delta_time_yaw_maneuvers = np.asarray([(x-t0).total_seconds() for x in yaw_maneuvers_gps])
+    #check that all delta times are in between the same yaw maneuvers
+    if np.sum(delta_time[0] > delta_time_yaw_maneuvers) == np.sum(delta_time[-1] > delta_time_yaw_maneuvers):
+        sc_orient = np.mod(np.sum(delta_time[0] > delta_time_yaw_maneuvers),2) * np.zeros(len(delta_time),dtype=int)
+    else:
+        #very unlikely, but if delta time crosses over yaw maneuver, then we need to find where and assign the right values
+        sc_orient = np.mod(np.asarray([np.sum(dt > delta_time_yaw_maneuvers) for dt in delta_time]),2)
+    return sc_orient
+
+def beam_orientation_to_strength(beam,orientation):
+    '''
+    Based on beam (e.g. gt2r) and orientation (0 or 1), returns the strength of the beam (strong or weak)
+    '''
+    beam = np.atleast_1d(beam)
+    orientation = np.atleast_1d(orientation)
+    beam_options = ['r','l']
+    orientation_options = [0,1]
+    if len(beam) != len(orientation):
+        print('Beam and orientation arrays must be the same length.')
+        return None
+    beam_side = np.asarray([b[3] for b in beam])
+    strength = np.zeros(len(beam),dtype='<U1')
+    idx_strong = np.logical_or(np.logical_and(orientation==0,beam_side=='l'),np.logical_and(orientation==1,beam_side=='r'))
+    idx_weak = np.logical_or(np.logical_and(orientation==0,beam_side=='r'),np.logical_and(orientation==1,beam_side=='l'))
+    strength[idx_strong] = 's'
+    strength[idx_weak] = 'w'
+    return strength
+    # for b,o in itertools.product(beam_options,orientation_options):
+        # strength[np.logical_and(beam_side==b,orientation==o)] = b + 's'

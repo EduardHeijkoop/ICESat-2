@@ -7,9 +7,10 @@ import configparser
 import argparse
 import warnings
 import subprocess
+import sys
 
 from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2
-from icesat2_utils import gps2utc,parallel_landmask
+from icesat2_utils import gps2utc,parallel_landmask,delta_time_to_orientation,beam_orientation_to_strength
 from gcp_utils import analyze_icesat2_land, copernicus_filter_icesat2
 
 ###Written by Eduard Heijkoop, University of Colorado###
@@ -38,6 +39,7 @@ def main():
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
     parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
+    parser.add_argument('--all',action='store_true',default=False,help='Toggle to analyze all (strong & weak) beams.')
     parser.add_argument('--weight',action='store_true',default=False,help='Toggle to incorporate weight parameter.')
     parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
     parser.add_argument('--version',default=6,type=int,help='Which version to download.')
@@ -49,6 +51,7 @@ def main():
     timestamp_flag = args.time
     beam_flag = args.beams
     weak_flag = args.weak
+    all_flag = args.all
     weight_flag = args.weight
     sigma_flag = args.sigma
     N_cpus = args.N_cpus
@@ -56,15 +59,9 @@ def main():
     copernicus_flag = args.copernicus
     keep_files_flag = args.keep_files
 
-    # SRTM_toggle = config.getboolean('GCP_CONSTANTS','SRTM_toggle')
-    # landmask_toggle = config.getboolean('GCP_CONSTANTS','landmask_toggle')
-    # timestamp_toggle = config.getboolean('GCP_CONSTANTS','timestamp_toggle')
-    # on_off_str = ('off','on')
-
-    # print('Current settings:')
-    # print(f'SRTM filtering : {on_off_str[SRTM_toggle]}')
-    # print(f'Landmask       : {on_off_str[landmask_toggle]}')
-    # print(f'Timestamps     : {on_off_str[timestamp_toggle]}')
+    if weak_flag == True and all_flag == True:
+        print('Cannot analyze weak and all beams at the same time.')
+        sys.exit()
 
     input_file = config.get('GCP_PATHS','input_file') #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
     osm_shp_file = config.get('GENERAL_PATHS','osm_shp_file') #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
@@ -134,7 +131,10 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag,weight_flag)
+        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag,weight_flag,all_flag)
+        if all_flag == True:
+            sc_orient = delta_time_to_orientation(delta_time_total_high_conf)
+            strength_high_conf = beam_orientation_to_strength(beam_high_conf,sc_orient)
         if len(lon_high_conf) == 0:
             continue
         if landmask_flag == True:
@@ -148,12 +148,16 @@ def main():
                 beam_high_conf = beam_high_conf[landmask]
             if sigma_flag == True:
                 sigma_high_conf = sigma_high_conf[landmask]
+            if all_flag == True:
+                strength_high_conf = strength_high_conf[landmask]
         else:
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf.txt'
         utc_time_high_conf = gps2utc(delta_time_total_high_conf)
         
         if weak_flag == True:
             icesat2_file = icesat2_file.replace('_high_conf','_high_conf_weak')
+        elif all_flag == True:
+            icesat2_file = icesat2_file.replace('_high_conf','_high_conf_all_beams')
         file_list = [icesat2_file]
         np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
         if timestamp_flag == True:
@@ -168,6 +172,10 @@ def main():
             icesat2_sigma_file = icesat2_file.replace('.txt','_sigma.txt')
             file_list.append(icesat2_sigma_file)
             np.savetxt(icesat2_sigma_file,sigma_high_conf,fmt='%.6f',delimiter=',',header='sigma',comments='')
+        if all_flag == True:
+            icesat2_strength_file = icesat2_file.replace('.txt','_strength.txt')
+            file_list.append(icesat2_strength_file)
+            np.savetxt(icesat2_strength_file,strength_high_conf,fmt='%.6f',delimiter=',',header='strength',comments='')
 
         if len(file_list) > 1:
             tmp_file = icesat2_file.replace('.txt','_tmp.txt')
@@ -207,6 +215,11 @@ def main():
                 icesat2_copernicus_sigma_file = icesat2_copernicus_file.replace('.txt','_sigma.txt')
                 file_list_copernicus.append(icesat2_copernicus_sigma_file)
                 np.savetxt(icesat2_copernicus_sigma_file,sigma_high_conf_copernicus,fmt='%.6f',delimiter=',',header='sigma',comments='')
+            if all_flag == True:
+                strength_high_conf_copernicus = strength_high_conf[copernicus_cond]
+                icesat2_copernicus_strength_file = icesat2_copernicus_file.replace('.txt','_strength.txt')
+                file_list_copernicus.append(icesat2_copernicus_strength_file)
+                np.savetxt(icesat2_copernicus_strength_file,strength_high_conf_copernicus,fmt='%.6f',delimiter=',',header='strength',comments='')
 
             if len(file_list_copernicus) > 1:
                 tmp_file = icesat2_copernicus_file.replace('.txt','_tmp.txt')
