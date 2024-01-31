@@ -37,8 +37,7 @@ def main():
     parser.add_argument('--landmask',action='store_true',default=False,help='Toggle to mask photons over land/water.')
     parser.add_argument('--time',action='store_true',default=False,help='Toggle to print timestamps.')
     parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
-    parser.add_argument('--weak',action='store_true',default=False,help='Toggle to analyze weak beams.')
-    parser.add_argument('--all',action='store_true',default=False,help='Toggle to analyze all (strong & weak) beams.')
+    parser.add_argument('--strength',default='strong',type=str,help='Which beams to analyze.',choices=['strong','weak','all'])
     parser.add_argument('--weight',action='store_true',default=False,help='Toggle to incorporate weight parameter.')
     parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
     parser.add_argument('--fpb',action='store_true',default=False,help='Toggle to incorporate first photon bias.')
@@ -51,8 +50,7 @@ def main():
     landmask_flag = args.landmask
     timestamp_flag = args.time
     beam_flag = args.beams
-    weak_flag = args.weak
-    all_flag = args.all
+    beam_strength = args.strength
     weight_flag = args.weight
     sigma_flag = args.sigma
     fpb_flag = args.fpb
@@ -61,9 +59,9 @@ def main():
     copernicus_flag = args.copernicus
     keep_files_flag = args.keep_files
 
-    if weak_flag == True and all_flag == True:
-        print('Cannot analyze weak and all beams at the same time.')
-        sys.exit()
+    if beam_strength == 'all':
+        #Must have beams to distinguish between strong and weak
+        beam_flag = True
 
     input_file = config.get('GCP_PATHS','input_file') #Input file with location name,lon_min,lon_max,lat_min,lat_max (1 header line)
     osm_shp_file = config.get('GENERAL_PATHS','osm_shp_file') #OpenStreetMap land polygons, available at https://osmdata.openstreetmap.de/data/land-polygons.html (use WGS84, not split)
@@ -133,8 +131,8 @@ def main():
         move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
         if move_code is not None:
             continue
-        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,weak_flag,sigma_flag,weight_flag,fpb_flag,all_flag)
-        if all_flag == True:
+        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,beam_strength,sigma_flag,weight_flag,fpb_flag)
+        if beam_strength == 'all':
             sc_orient = delta_time_to_orientation(delta_time_total_high_conf)
             strength_high_conf = beam_orientation_to_strength(beam_high_conf,sc_orient)
         if len(lon_high_conf) == 0:
@@ -150,15 +148,15 @@ def main():
                 beam_high_conf = beam_high_conf[landmask]
             if sigma_flag == True:
                 sigma_high_conf = sigma_high_conf[landmask]
-            if all_flag == True:
+            if beam_strength == 'all':
                 strength_high_conf = strength_high_conf[landmask]
         else:
             icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf.txt'
         utc_time_high_conf = gps2utc(delta_time_total_high_conf)
         
-        if weak_flag == True:
+        if beam_strength == 'weak':
             icesat2_file = icesat2_file.replace('_high_conf','_high_conf_weak')
-        elif all_flag == True:
+        elif beam_strength == 'all':
             icesat2_file = icesat2_file.replace('_high_conf','_high_conf_all_beams')
         file_list = [icesat2_file]
         np.savetxt(icesat2_file,np.c_[lon_high_conf,lat_high_conf,h_high_conf],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
@@ -174,10 +172,10 @@ def main():
             icesat2_sigma_file = icesat2_file.replace('.txt','_sigma.txt')
             file_list.append(icesat2_sigma_file)
             np.savetxt(icesat2_sigma_file,sigma_high_conf,fmt='%.6f',delimiter=',',header='sigma',comments='')
-        if all_flag == True:
+        if beam_strength == 'all':
             icesat2_strength_file = icesat2_file.replace('.txt','_strength.txt')
             file_list.append(icesat2_strength_file)
-            np.savetxt(icesat2_strength_file,strength_high_conf,fmt='%.6f',delimiter=',',header='strength',comments='')
+            np.savetxt(icesat2_strength_file,strength_high_conf.astype(object),fmt='%s',delimiter=',',header='strength',comments='')
 
         if len(file_list) > 1:
             tmp_file = icesat2_file.replace('.txt','_tmp.txt')
@@ -198,8 +196,10 @@ def main():
                 icesat2_copernicus_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked_copernicus_filtered_threshold_{copernicus_threshold_str}_m.txt'
             else:
                 icesat2_copernicus_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_copernicus_filtered_threshold_{copernicus_threshold_str}_m.txt'
-            if weak_flag == True:
+            if beam_strength == 'weak':
                 icesat2_copernicus_file = icesat2_copernicus_file.replace('_high_conf','_high_conf_weak')
+            elif beam_strength == 'all':
+                icesat2_copernicus_file = icesat2_copernicus_file.replace('_high_conf','_high_conf_all_beams')
             file_list_copernicus = [icesat2_copernicus_file]
             np.savetxt(icesat2_copernicus_file,np.c_[lon_high_conf_copernicus,lat_high_conf_copernicus,h_high_conf_copernicus],fmt='%.6f,%.6f,%.6f',delimiter=',',header='lon,lat,height_icesat2',comments='')
             if timestamp_flag == True:
@@ -217,11 +217,11 @@ def main():
                 icesat2_copernicus_sigma_file = icesat2_copernicus_file.replace('.txt','_sigma.txt')
                 file_list_copernicus.append(icesat2_copernicus_sigma_file)
                 np.savetxt(icesat2_copernicus_sigma_file,sigma_high_conf_copernicus,fmt='%.6f',delimiter=',',header='sigma',comments='')
-            if all_flag == True:
+            if beam_strength == 'all':
                 strength_high_conf_copernicus = strength_high_conf[copernicus_cond]
                 icesat2_copernicus_strength_file = icesat2_copernicus_file.replace('.txt','_strength.txt')
                 file_list_copernicus.append(icesat2_copernicus_strength_file)
-                np.savetxt(icesat2_copernicus_strength_file,strength_high_conf_copernicus,fmt='%.6f',delimiter=',',header='strength',comments='')
+                np.savetxt(icesat2_copernicus_strength_file,strength_high_conf_copernicus.astype(object),fmt='s',delimiter=',',header='strength',comments='')
 
             if len(file_list_copernicus) > 1:
                 tmp_file = icesat2_copernicus_file.replace('.txt','_tmp.txt')

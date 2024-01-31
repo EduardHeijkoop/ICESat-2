@@ -4,8 +4,9 @@ import subprocess
 import os
 from osgeo import gdal,gdalconst,osr
 import pandas as pd
+from icesat2_utils import beam_orientation_to_strength
 
-def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_flag=False,sigma_flag=True,weight_flag=False,fpb_flag=False,all_flag=False):
+def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,beam_strength_req='strong',sigma_flag=True,weight_flag=False,fpb_flag=False):
     '''
     Given a directory of downloaded ATL03 hdf5 files,
     reads them and writes the high confidence photons to a CSV as:
@@ -14,11 +15,7 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
     icesat2_list = icesat2_dir+city_name + '/icesat2_list.txt'
     with open(icesat2_list) as f3:
         file_list = f3.read().splitlines()
-    beam_list_r = ['gt1r','gt2r','gt3r']
-    beam_list_l = ['gt1l','gt2l','gt3l']
-    if weak_flag == True:
-        beam_list_r = ['gt1l','gt2l','gt3l']
-        beam_list_l = ['gt1r','gt2r','gt3r']
+    beam_list = ['gt1l','gt1r','gt2l','gt2r','gt3l','gt3r']
     lon_high_conf = np.empty([0,1],dtype=float) #Initialize arrays and start reading .h5 files
     lat_high_conf = np.empty([0,1],dtype=float)
     h_high_conf = np.empty([0,1],dtype=float)
@@ -32,19 +29,20 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
         atl03_data = h5py.File(full_file,'r')
         list(atl03_data.keys())
         sc_orient = atl03_data['/orbit_info/sc_orient'][0] #Select strong beams according to S/C orientation
-        if sc_orient == 1:
-            beam_list_req = beam_list_r
-        elif sc_orient == 0:
-            beam_list_req = beam_list_l
-        elif sc_orient == 2:
+        if sc_orient == 2:
             continue
-        if all_flag == True:
-            beam_list_req = beam_list_l + beam_list_r
-        for beam in beam_list_req:
-            '''
-            Some beams don't actually have any height data in them, so this is done to skip those
-            Sometimes only one or two beams are present, this also prevents looking for those
-            '''
+        for beam in beam_list:
+            # Select beams according to required strength (strong, weak or all) and orientation:
+            # SC orient==1 -> R strong, L weak
+            # SC orient==0 -> L strong, R weak
+            # SC orient==2 -> skip (S/C in transition)
+            beam_strength = beam_orientation_to_strength(beam,sc_orient)[0]
+            if beam_strength_req == 'all':
+                pass
+            elif beam_strength_req[0] != beam_strength:
+                continue
+            # Some beams don't actually have any height data in them, so this is done to skip those
+            # Sometimes only one or two beams are present, this also prevents looking for those
             heights_check = False
             heights_check = f'/{beam}/heights' in atl03_data
             if heights_check == False:
@@ -56,7 +54,10 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
             tmp_delta_time = np.asarray(atl03_data[f'/{beam}/heights/delta_time']).squeeze()
             tmp_delta_time_total = tmp_sdp + tmp_delta_time
             tmp_signal_conf = np.asarray(atl03_data[f'/{beam}/heights/signal_conf_ph'])
-            tmp_high_conf = tmp_signal_conf[:,0] == 4
+            if beam_strength == 's':
+                tmp_high_conf = tmp_signal_conf[:,0] == 4
+            elif beam_strength == 'w':
+                tmp_high_conf = np.logical_or(tmp_signal_conf[:,0]==3,tmp_signal_conf[:,0]==4)
             tmp_quality = np.asarray(atl03_data[f'/{beam}/heights/quality_ph'])
             tmp_high_quality = tmp_quality == 0
             if weight_flag == True:
@@ -116,7 +117,7 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,weak_fla
     '''
     A lot of data will be captured off the coast that we don't want,
     this is a quick way of getting rid of that
-    Also prevents areas with no SRTM from being queried
+    Also prevents areas with no Copernicus from being queried
     '''
     idx_lon = np.logical_or(lon_high_conf < np.min(shp_data.bounds.minx),lon_high_conf > np.max(shp_data.bounds.maxx))
     idx_lat = np.logical_or(lat_high_conf < np.min(shp_data.bounds.miny),lat_high_conf > np.max(shp_data.bounds.maxy))

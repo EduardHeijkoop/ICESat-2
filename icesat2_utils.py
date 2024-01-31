@@ -791,5 +791,3 @@ def beam_orientation_to_strength(beam,orientation):
     strength[idx_strong] = 's'
     strength[idx_weak] = 'w'
     return strength
-    # for b,o in itertools.product(beam_options,orientation_options):
-        # strength[np.logical_and(beam_side==b,orientation==o)] = b + 's'
