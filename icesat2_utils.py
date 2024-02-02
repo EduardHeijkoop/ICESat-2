@@ -767,7 +767,7 @@ def delta_time_to_orientation(delta_time):
     delta_time_yaw_maneuvers = np.asarray([(x-t0).total_seconds() for x in yaw_maneuvers_gps])
     #check that all delta times are in between the same yaw maneuvers
     if np.sum(delta_time[0] > delta_time_yaw_maneuvers) == np.sum(delta_time[-1] > delta_time_yaw_maneuvers):
-        sc_orient = np.mod(np.sum(delta_time[0] > delta_time_yaw_maneuvers),2) * np.zeros(len(delta_time),dtype=int)
+        sc_orient = np.mod(np.sum(delta_time[0] > delta_time_yaw_maneuvers),2) * np.ones(len(delta_time),dtype=int)
     else:
         #very unlikely, but if delta time crosses over yaw maneuver, then we need to find where and assign the right values
         sc_orient = np.mod(np.asarray([np.sum(dt > delta_time_yaw_maneuvers) for dt in delta_time]),2)
