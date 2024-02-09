@@ -54,10 +54,13 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,beam_str
             tmp_delta_time = np.asarray(atl03_data[f'/{beam}/heights/delta_time']).squeeze()
             tmp_delta_time_total = tmp_sdp + tmp_delta_time
             tmp_signal_conf = np.asarray(atl03_data[f'/{beam}/heights/signal_conf_ph'])
-            if beam_strength == 's':
-                tmp_high_conf = tmp_signal_conf[:,0] == 4
-            elif beam_strength == 'w':
-                tmp_high_conf = np.logical_or(tmp_signal_conf[:,0]==3,tmp_signal_conf[:,0]==4)
+            #uncomment this if you want medium and high confidence for weak, and high confidence for strong
+            #otherwise high confidence photons only
+            # if beam_strength == 's':
+            #     tmp_high_conf = tmp_signal_conf[:,0] == 4
+            # elif beam_strength == 'w':
+            #     tmp_high_conf = np.logical_or(tmp_signal_conf[:,0]==3,tmp_signal_conf[:,0]==4)
+            tmp_high_conf = tmp_signal_conf[:,0] == 4
             tmp_quality = np.asarray(atl03_data[f'/{beam}/heights/quality_ph'])
             tmp_high_quality = tmp_quality == 0
             if weight_flag == True:
