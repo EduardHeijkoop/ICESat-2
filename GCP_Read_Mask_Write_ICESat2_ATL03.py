@@ -8,8 +8,9 @@ import argparse
 import warnings
 import subprocess
 import sys
+import glob
 
-from icesat2_utils import get_token,get_osm_extents,create_bbox,move_icesat2,download_icesat2
+from icesat2_utils import get_osm_extents,create_bbox,move_icesat2,download_icesat2,check_h5_count,check_password_nasa_earthdata
 from icesat2_utils import gps2utc,parallel_landmask,delta_time_to_orientation,beam_orientation_to_strength
 from gcp_utils import analyze_icesat2_land, copernicus_filter_icesat2
 
@@ -72,6 +73,7 @@ def main():
 
     user = config.get('GENERAL_CONSTANTS','earthdata_username') #Your NASA EarthData username
     pw = getpass.getpass('NASA EarthData password:') #Your NASA EarthData password
+    pw_check = check_password_nasa_earthdata(user,pw)
     if copernicus_flag:
         copernicus_threshold = config.getfloat('GCP_CONSTANTS','Copernicus_Threshold') #set your copernicus threshold here
         copernicus_threshold_str = str(copernicus_threshold).replace('.','p') #replace decimal point with p for file name
@@ -122,15 +124,27 @@ def main():
         bbox_code = create_bbox(icesat2_dir,df_extents.iloc[i])
         if bbox_code is not None:
             continue
-        sync_async_code = download_icesat2(user,pw,df_extents.iloc[i],version)
-        if sync_async_code is None:
-            continue
-        '''
-        Add some filter when nothing has been downloaded.
-        '''
-        move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
-        if move_code is not None:
-            continue
+        N_h5 = check_h5_count(f'{icesat2_dir}{city_name}')
+        if N_h5 > 0:
+            h5_check = input('HDF5 files already found in directory! Analyze these instead? y/n\n'\
+                             'y: analyze current HDF5 files (lon/lat extents may not match current input).\n'\
+                             'n: remove current HDF5 files, download new set and analyze those.\n')
+            input_option_list = ['y','yes']
+            if h5_check.lower() not in input_option_list:
+                subprocess.run(f'rm {icesat2_dir}{city_name}/*.h5',shell=True)
+                sync_async_code = download_icesat2(user,pw,df_extents.iloc[i],version)
+                if sync_async_code is None:
+                    continue
+                move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
+                if move_code is not None:
+                    continue
+        else:
+            sync_async_code = download_icesat2(user,pw,df_extents.iloc[i],version)
+            if sync_async_code is None:
+                continue
+            move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
+            if move_code is not None:
+                continue
         lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,beam_strength,sigma_flag,weight_flag,fpb_flag)
         if beam_strength == 'all':
             sc_orient = delta_time_to_orientation(delta_time_total_high_conf)

@@ -18,6 +18,7 @@ import requests
 import time
 import sys
 import itertools
+import base64
 
 def get_lonlat_shp(shp_path):
     '''
@@ -183,30 +184,6 @@ def get_token(user):
     token = token_root[0].text
     return token
 
-# def user_pw_to_base64(user,pw):
-#     '''
-#     Converts username and password to base64 encoding
-#     '''
-#     user_pw = user+':'+pw
-#     user_pw_bytes = user_pw.encode('ascii')
-#     user_pw_base64 = base64.b64encode(user_pw_bytes)
-#     user_pw_base64 = user_pw_base64.decode('ascii')
-#     return user_pw_base64
-
-# def get_token(user):
-#     '''
-#     Given NASA EarthData username, download NASA URS token.
-#     Token expires after 60 days
-#     Checks if there are any tokens available and if so, if they have expired.
-#     If they are expired, deletes them, and generates a new token.
-#     '''
-#     today_datetime = datetime.datetime.now()
-#     if os.path.isfile('Token.json'):
-#         token_data = json.loads(open('Token.json').read())
-#         expiration_date = datetime.datetime.strptime(token_data['expiration_date'],'%m/%d/%Y')
-
-
-
 def cleanup():
     '''
     Cleans up a number of files that linger after download
@@ -244,7 +221,7 @@ def move_icesat2(icesat2_dir,df_city):
         json_list = sorted(glob.glob(f'{city_dir}request*.json'))
         if len(json_list) > 0:
             subprocess.run(f'rm {city_dir}request*.json',shell=True)
-    subprocess.run(f'find {city_dir}*h5 -printf "%f\\n" > {city_dir}icesat2_list.txt',shell=True)
+    # subprocess.run(f'find {city_dir}*h5 -printf "%f\\n" > {city_dir}icesat2_list.txt',shell=True)
     return None
 
 def get_osm_extents(df_city,osm_shp_path,icesat2_dir):
@@ -523,78 +500,6 @@ def download_icesat2(user,pw,df_city,version):
 
     return sync_async_code
 
-# def download_icesat2(df_city,token,error_log_file,version=5):
-#     #Given lon/lat extents in a Pandas DataFrame (df_city),
-#     #downloads ICESat-2 ATL03 geolocated photons
-#     city_name = df_city.city
-#     t_start = df_city.t_start
-#     t_end = df_city.t_end
-#     t_start_valid = validate_date(t_start)
-#     t_end_valid = validate_date(t_end)
-#     lon_min_str = str(df_city.lon_min)
-#     lon_max_str = str(df_city.lon_max)
-#     lat_min_str = str(df_city.lat_min)
-#     lat_max_str = str(df_city.lat_max)
-#     token_command = 'token='+token
-#     site_command = 'https://n5eil02u.ecs.nsidc.org/egi/request?'
-#     email_command = 'email=false'
-#     short_name = 'ATL03'
-#     coverage_command = 'coverage='
-#     beam_list = ['1l','1r','2l','2r','3l','3r']
-#     for beam in beam_list:
-#         coverage_command = coverage_command + cat_str_API(beam)
-#     coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
-#     short_name_command = f'short_name={short_name}&version={version:03d}'
-#     if t_start_valid == True:
-#         t_start = datetime.datetime.strptime(t_start,'%Y-%m-%d').strftime('%Y-%m-%d')
-#     else:
-#         t_start = '2018-10-01'
-
-#     if t_end_valid == True:
-#         t_end = datetime.datetime.strptime(t_end,'%Y-%m-%d').strftime('%Y-%m-%d')
-#     else:
-#         t_end = datetime.datetime.now().strftime('%Y-%m-%d')
-
-#     if np.logical_and(t_start_valid==False,t_end_valid==False):
-#         time_command = ''
-#     else:
-#         time_command = 'time='+t_start+'T00:00:00,'+t_end+'T23:59:59&'
-#     bounding_box_command = 'bounding_box='+lon_min_str+','+lat_min_str+','+lon_max_str+','+lat_max_str
-#     bbox_command = 'bbox='+lon_min_str+','+lat_min_str+','+lon_max_str+','+lat_max_str
-#     shape_command = bounding_box_command + '&' + bbox_command + '&'
-#     page_number = 1
-#     page_condition = True
-#     while page_condition:
-#         page_command = 'page_num='+str(page_number)
-#         full_command = 'curl -O -J -k --dump-header response-header.txt \"' + \
-#             site_command + '&' + short_name_command + '&' + token_command + '&' + \
-#             email_command + '&' + shape_command + time_command + \
-#             coverage_command + '&' + page_command + '\"'
-#         subprocess.run(full_command,shell=True)
-#         with open('response-header.txt','r') as f2:
-#             response_line = f2.readline().replace('\n','')
-#         if response_line[9:12] == '200':
-#             page_number = page_number + 1
-#         elif response_line[9:12] == '204':
-#             print('End of download.')
-#             page_condition = False
-#         elif response_line[9:12] == '501':
-#             page_condition = False
-#         else:
-#             print('Something bad happened.')
-#             print('Exiting...')
-#             page_condition = False
-#     if page_number == 1:
-#         print('Nothing was downloaded.')
-#         print('Check extents - possibly no coverage!')
-#         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-#         with open(error_log_file,'a') as text_file:
-#             text_file.write(now_str + ': ' + city_name + ' - No data download.\n')
-#             print('No data downloaded!')
-#         return 0
-#     else:
-#         return None
-
 def landmask_icesat2(lon,lat,lon_coast,lat_coast,landmask_c_file,inside_flag):
     '''
     Given lon/lat of points, and lon/lat of coast (or any other boundary),
@@ -791,3 +696,28 @@ def beam_orientation_to_strength(beam,orientation):
     strength[idx_strong] = 's'
     strength[idx_weak] = 'w'
     return strength
+
+def check_password_nasa_earthdata(user,pw):
+    url = 'https://urs.earthdata.nasa.gov/api/users/find_or_create_token'
+    #url = 'https://urs.earthdata.nasa.gov'
+    credentials = f'{user}:{pw}'
+    encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+    headers = {'Authorization': f'Basic {encoded_credentials}'}
+    response = requests.post(url, headers=headers)
+    status_code = response.status_code
+    if status_code == 200:
+        return True
+    elif status_code == 401:
+        raise Exception('Unauthorized! User + password likely incorrect.')
+    elif status_code == 403:
+        raise Exception('Forbidden!')
+    elif status_code >= 500:
+        raise Exception('NASA EarthData may be down. Try again later.')
+    else:
+        raise Exception('Unknown code returned by NASA EarthData. Can\'t continue.')
+
+def check_h5_count(dir):
+    if dir[-1] != '/':
+        dir = dir + '/'
+    h5_list = sorted(glob.glob(f'{dir}*.h5'))
+    return len(h5_list)
