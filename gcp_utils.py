@@ -12,7 +12,7 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,beam_str
     reads them and writes the high confidence photons to a CSV as:
     longitude,latitude,height [WGS84],time [UTC](,beam)
     '''
-    subprocess.run(f'find *h5 -printf "%f\\n" > icesat2_list.txt',shell=True,cwd=icesat2_dir+city_name)
+    subprocess.run(f'find *.h5 > icesat2_list.txt',shell=True,cwd=f'{icesat2_dir}{city_name}')
     icesat2_list = f'{icesat2_dir}{city_name}/icesat2_list.txt'
     with open(icesat2_list) as f3:
         file_list = f3.read().splitlines()
