@@ -129,7 +129,7 @@ def great_circle_distance(lon1,lat1,lon2,lat2,R=6378137.0):
     return distance
 
 def deg2rad(deg):
-    rad = deg*np.math.pi/180
+    rad = deg*np.pi/180
     return rad
 
 def gps2utc(gps_time):
@@ -156,48 +156,48 @@ def utc2gps(utc_time_str):
     gps_time = np.asarray([(x-t0).total_seconds() for x in gps_time_datetime])
     return gps_time
 
-def get_token(user):
-    '''
-    Given username and password, get NSIDC token to download ICESat-2
-    Checks age of token file as it expires after 30 days
-    If token not present, triggers next if statement immediately to generate new token
-    '''
-    today_datetime = datetime.datetime.now()
-    if os.path.isfile('Token.xml'):
-        stats_token = os.stat('Token.xml')
-        token_datetime = datetime.datetime.fromtimestamp(stats_token.st_mtime)
-    else:
-        token_datetime = datetime.datetime.strptime('1900-01-01','%Y-%m-%d')
-    token_age = today_datetime - token_datetime
-    if token_age.days >= 30:
-        print('Token expired or not present!')
-        print('Please enter NASA EarthData password to generate new token:')
-        pw = getpass.getpass()
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip_address = s.getsockname()[0]
-        s.close()
-        token_command = 'curl -X POST --header \"Content-Type: application/xml\" -d \'<token><username>'+user+'</username><password>'+pw+'</password><client_id>NSIDC_client_id</client_id><user_ip_address>'+ip_address+'</user_ip_address> </token>\' https://cmr.earthdata.nasa.gov/legacy-services/rest/tokens -o Token.xml --silent'
-        subprocess.run(token_command,shell=True)
-    token_tree = ET.parse('Token.xml')
-    token_root = token_tree.getroot()
-    token = token_root[0].text
-    return token
+# def get_token(user):
+#     '''
+#     Given username and password, get NSIDC token to download ICESat-2
+#     Checks age of token file as it expires after 30 days
+#     If token not present, triggers next if statement immediately to generate new token
+#     '''
+#     today_datetime = datetime.datetime.now()
+#     if os.path.isfile('Token.xml'):
+#         stats_token = os.stat('Token.xml')
+#         token_datetime = datetime.datetime.fromtimestamp(stats_token.st_mtime)
+#     else:
+#         token_datetime = datetime.datetime.strptime('1900-01-01','%Y-%m-%d')
+#     token_age = today_datetime - token_datetime
+#     if token_age.days >= 30:
+#         print('Token expired or not present!')
+#         print('Please enter NASA EarthData password to generate new token:')
+#         pw = getpass.getpass()
+#         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#         s.connect(("8.8.8.8", 80))
+#         ip_address = s.getsockname()[0]
+#         s.close()
+#         token_command = 'curl -X POST --header \"Content-Type: application/xml\" -d \'<token><username>'+user+'</username><password>'+pw+'</password><client_id>NSIDC_client_id</client_id><user_ip_address>'+ip_address+'</user_ip_address> </token>\' https://cmr.earthdata.nasa.gov/legacy-services/rest/tokens -o Token.xml --silent'
+#         subprocess.run(token_command,shell=True)
+#     token_tree = ET.parse('Token.xml')
+#     token_root = token_tree.getroot()
+#     token = token_root[0].text
+#     return token
 
-def cleanup():
-    '''
-    Cleans up a number of files that linger after download
-    '''
-    data_end_utc_files = glob.glob('*data_end_utc*')
-    for data_end_file in data_end_utc_files:
-        data_end_file = data_end_file.replace('&','\&')
-        data_end_file = data_end_file.replace('=','\=')
-        subprocess.run('rm '+data_end_file,shell=True)
-    if os.path.exists('response-header.txt'):
-        subprocess.run('rm response-header.txt',shell=True)
-    if os.path.exists('error.xml'):
-        subprocess.run('rm error.xml',shell=True)
-    return None
+# def cleanup():
+#     '''
+#     Cleans up a number of files that linger after download
+#     '''
+#     data_end_utc_files = glob.glob('*data_end_utc*')
+#     for data_end_file in data_end_utc_files:
+#         data_end_file = data_end_file.replace('&','\\&')
+#         data_end_file = data_end_file.replace('=','\\=')
+#         subprocess.run('rm '+data_end_file,shell=True)
+#     if os.path.exists('response-header.txt'):
+#         subprocess.run('rm response-header.txt',shell=True)
+#     if os.path.exists('error.xml'):
+#         subprocess.run('rm error.xml',shell=True)
+#     return None
 
 def move_icesat2(icesat2_dir,df_city):
     '''
@@ -289,7 +289,6 @@ def cat_str_API(beam):
         f'/{beam}/geophys_corr/delta_time,/{beam}/geophys_corr/tide_ocean,/{beam}/geophys_corr/dac,/{beam}/geophys_corr/tide_equilibrium,'
     return beam_command
 
-
 def download_icesat2(user,pw,df_city,version):
     version_str = f'{version:03d}'
     short_name = 'ATL03'
@@ -303,7 +302,6 @@ def download_icesat2(user,pw,df_city,version):
     if not version_str in available_versions:
         print(f'Version {version_str} not available. Available versions are: {available_versions}')
         return None
-    
     city_name = df_city.city
     t_start = df_city.t_start
     t_end = df_city.t_end
@@ -347,7 +345,6 @@ def download_icesat2(user,pw,df_city,version):
         for beam in beam_list:
             coverage_command = coverage_command + cat_str_API(beam)
         coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
-
         search_params = {
             'short_name': short_name,
             'version': version_str,
@@ -367,7 +364,6 @@ def download_icesat2(user,pw,df_city,version):
             search_params['page_num'] += 1
         granules = [granule for granule in granules if f'SC:ATL03.{version_str}' in granule['title']]
         print(f'There are {len(granules)} granules of {short_name} over {city_name} for the year {year}.')
-
         # granule_sizes = [float(granule['granule_size']) for granule in granules]
         # dl_size = np.sum(granule_sizes)
         # file_size_ext = 'MB'
@@ -375,7 +371,6 @@ def download_icesat2(user,pw,df_city,version):
         #     dl_size = dl_size / 1024
         #     file_size_ext = 'GB'
         # print(f'Total download size before spatial subsetting: {dl_size:.1f} {file_size_ext}')
-
         capability_url = f'https://n5eil02u.ecs.nsidc.org/egi/capabilities/{short_name}.{version_str}.xml'
         capability_session = requests.session()
         capability_s = capability_session.get(capability_url)
@@ -391,7 +386,6 @@ def download_icesat2(user,pw,df_city,version):
             return None
         N_sync = int(subagent[0]['maxGransSyncRequest'])
         N_async = int(subagent[0]['maxGransAsyncRequest'])
-
         if len(granules) > N_sync:
             request_mode = 'async'
             page_size = 100 #for some reason higher values will not download all data (more recent files will be excluded)
@@ -403,7 +397,6 @@ def download_icesat2(user,pw,df_city,version):
             sync_async_code = 'sync'
             print('Going for synchronous request.')
         page_num = int(np.ceil(len(granules)/page_size))
-
         #empty parameters will be deleted, but can be added at user's discretion
         param_dict = {'short_name': short_name, 
                     'version': version_str, 
@@ -422,13 +415,11 @@ def download_icesat2(user,pw,df_city,version):
         param_dict = {k: v for k, v in param_dict.items() if v != ''}
         param_string = '&'.join("{!s}={!r}".format(k,v) for (k,v) in param_dict.items())
         param_string = param_string.replace("'","")
-
         endpoint_list = [] 
         for i in range(page_num):
             page_val = i + 1
             API_request = f'{base_url}?{param_string}&page_num={page_val}'
             endpoint_list.append(API_request)
-
         print(f'Downloading for {city_name}...')
         if request_mode=='async':
             for i in range(page_num):
@@ -497,7 +488,6 @@ def download_icesat2(user,pw,df_city,version):
                 fz.write(request.content)
                 fz.close()
         print('Download complete.')
-
     return sync_async_code
 
 def landmask_icesat2(lon,lat,lon_coast,lat_coast,landmask_c_file,inside_flag):
@@ -558,98 +548,98 @@ def parallel_pnpoly(lon_pts,lat_pts,lon_boundary,lat_boundary,landmask_so_file):
     landmask_lib.pnpoly(c.c_int(len(lon_boundary)),c.c_int(len(lon_pts)),arrx,arry,arrx_input,arry_input,c.c_void_p(landmask.ctypes.data))
     return landmask
 
-def DTU21_filter_icesat2(h_unfiltered,icesat2_file,icesat2_dir,df_city,DTU21_threshold,DTU21_path):
-    #Given an ICESat-2 file, samples the DTU21 Mean Sea Surface file at the lon/lat points of ICESat-2
-    #If the difference between the ICESat-2 height and DTU21 height is larger than the given threshold, discard that ICESat-2 point
-    #This is primarily a good way to get rid of large outliers, e.g. due to clouds
-    city_name = df_city.city
-    DTU21_sampled_file = icesat2_dir + city_name + '/' + city_name + '_sampled_DTU21.txt'
-    print('Sampling DTU21...')
-    subprocess.run('cut -d\',\' -f1-2 ' + icesat2_file + ' | sed \'s/,/ /g\' | gdallocationinfo -wgs84 -valonly ' + DTU21_path + ' > ' + DTU21_sampled_file,shell=True)
-    print('Sampled DTU21')
-    df_DTU21 = pd.read_csv(DTU21_sampled_file,header=None,names=['h_DTU21'],dtype={'h_DTU21':'float'})
-    h_sampled_DTU21 = np.asarray(df_DTU21.h_DTU21)
-    DTU21_cond = np.abs(h_unfiltered - h_sampled_DTU21) < DTU21_threshold
-    subprocess.run('rm ' + DTU21_sampled_file,shell=True)
-    return DTU21_cond
+# def DTU21_filter_icesat2(h_unfiltered,icesat2_file,icesat2_dir,df_city,DTU21_threshold,DTU21_path):
+#     #Given an ICESat-2 file, samples the DTU21 Mean Sea Surface file at the lon/lat points of ICESat-2
+#     #If the difference between the ICESat-2 height and DTU21 height is larger than the given threshold, discard that ICESat-2 point
+#     #This is primarily a good way to get rid of large outliers, e.g. due to clouds
+#     city_name = df_city.city
+#     DTU21_sampled_file = icesat2_dir + city_name + '/' + city_name + '_sampled_DTU21.txt'
+#     print('Sampling DTU21...')
+#     subprocess.run('cut -d\',\' -f1-2 ' + icesat2_file + ' | sed \'s/,/ /g\' | gdallocationinfo -wgs84 -valonly ' + DTU21_path + ' > ' + DTU21_sampled_file,shell=True)
+#     print('Sampled DTU21')
+#     df_DTU21 = pd.read_csv(DTU21_sampled_file,header=None,names=['h_DTU21'],dtype={'h_DTU21':'float'})
+#     h_sampled_DTU21 = np.asarray(df_DTU21.h_DTU21)
+#     DTU21_cond = np.abs(h_unfiltered - h_sampled_DTU21) < DTU21_threshold
+#     subprocess.run('rm ' + DTU21_sampled_file,shell=True)
+#     return DTU21_cond
 
 
-def SRTM_filter_icesat2(lon,lat,h,icesat2_file,icesat2_dir,df_city,user,pw,SRTM_threshold,EGM96_path):
-    #Given lon/lat/h, downloads SRTM 1x1 deg tiles, merges tiles together and changes from referencing EGM96 to WGS84 ellipsoid.
-    #Then, samples the lon/lat points of ICESat-2 at the full SRTM mosaic
-    #If the difference between the ICESat-2 height and SRTM height is larger than the given threshold, discard that ICESat-2 point
-    #This is primarily a good way to get rid of large outliers, e.g. due to clouds
-    city_name = df_city.city
-    lon_min_SRTM = np.min(lon)
-    lon_max_SRTM = np.max(lon)
-    lat_min_SRTM = np.min(lat)
-    lat_max_SRTM = np.max(lat)
-    SRTM_list = []
-    lon_range = range(int(np.floor(lon_min_SRTM)),int(np.floor(lon_max_SRTM))+1)
-    lat_range = range(int(np.floor(lat_min_SRTM)),int(np.floor(lat_max_SRTM))+1)
-    for i in range(len(lon_range)):
-        for j in range(len(lat_range)):
-            if lon_range[i] >= 0:
-                lonLetter = 'E'
-            else:
-                lonLetter = 'W'
-            if lat_range[j] >= 0:
-                latLetter = 'N'
-            else:
-                latLetter = 'S'
-            lonCode = f"{int(np.abs(np.floor(lon_range[i]))):03d}"
-            latCode = f"{int(np.abs(np.floor(lat_range[j]))):02d}"
-            SRTM_id = latLetter + latCode + lonLetter + lonCode
-            SRTM_list.append(SRTM_id)
-    merge_command = f'gdal_merge.py -q -o {icesat2_dir}{city_name}/{city_name}_SRTM.tif '
-    print('Downloading SRTM...')
-    for i in range(len(SRTM_list)):
-        DL_command = 'wget --user=' + user + ' --password=' + pw + ' https://e4ftl01.cr.usgs.gov/MEASURES/SRTMGL1.003/2000.02.11/' + SRTM_list[i] + '.SRTMGL1.hgt.zip --no-check-certificate --quiet'
-        subprocess.run(DL_command,shell=True)
-        exists = os.path.isfile(SRTM_list[i] + '.SRTMGL1.hgt.zip')
-        if exists:
-            mv_command = 'mv ' + SRTM_list[i] + '.SRTMGL1.hgt.zip ' + icesat2_dir + city_name + '/'
-            unzip_command = 'unzip -qq ' + icesat2_dir + city_name + '/' + SRTM_list[i] + '.SRTMGL1.hgt.zip -d ' + icesat2_dir + city_name + '/'
-            delete_command = 'rm ' + icesat2_dir + city_name + '/' + SRTM_list[i] + '.SRTMGL1.hgt.zip'
-            subprocess.run(mv_command,shell=True)
-            subprocess.run(unzip_command,shell=True)
-            subprocess.run(delete_command,shell=True)
-            merge_command = merge_command + icesat2_dir + city_name + '/' + SRTM_list[i] + '.hgt '
-    print('Downloaded SRTM.')
-    print('Merging SRTM...')
-    subprocess.run(merge_command,shell=True)
-    print('Merged SRTM.')
-    src = gdal.Open(EGM96_path, gdalconst.GA_ReadOnly)
-    src_proj = src.GetProjection()
-    src_geotrans = src.GetGeoTransform()
-    match_filename = icesat2_dir + city_name + '/' + city_name + '_SRTM.tif'
-    match_ds = gdal.Open(match_filename,gdalconst.GA_Update)
-    match_proj = match_ds.GetProjection()
-    match_geotrans = match_ds.GetGeoTransform()
-    wide = match_ds.RasterXSize
-    high = match_ds.RasterYSize
-    dst_filename = icesat2_dir + city_name + '/EGM96_' + city_name + '.tif'
-    dst = gdal.GetDriverByName('GTiff').Create(dst_filename, wide, high, 1, gdalconst.GDT_Float32)
-    dst.SetGeoTransform(match_geotrans)
-    dst.SetProjection(match_proj)
-    gdal.ReprojectImage(src, dst, src_proj, match_proj, gdalconst.GRA_NearestNeighbour)
-    del dst
-    SRTM_wgs84_file = icesat2_dir + city_name + '/' + city_name + '_SRTM_WGS84.tif'
-    subprocess.run('gdal_calc.py -A ' + dst_filename + ' -B ' + match_filename + ' --outfile ' + SRTM_wgs84_file + ' --calc=A+B --quiet',shell=True)
-    subprocess.run('rm ' + match_filename,shell=True)
-    subprocess.run('rm ' + dst_filename,shell=True)
-    for jj in range(len(SRTM_list)):
-        subprocess.run('rm ' + icesat2_dir + city_name + '/' + SRTM_list[jj] + '.hgt',shell=True)
-    SRTM_sampled_file = f'{icesat2_dir}{city_name}/{city_name}_sampled_SRTM.txt'
-    print('Sampling SRTM...')
-    subprocess.run(f'cut -d\',\' -f1-2 {icesat2_file} | sed \'s/,/ /g\' | gdallocationinfo -wgs84 -valonly {SRTM_wgs84_file} > {SRTM_sampled_file}',shell=True)
-    print('Sampled SRTM')
-    df_SRTM = pd.read_csv(SRTM_sampled_file,header=None,names=['h_SRTM'],dtype={'h_SRTM':'float'})
-    h_sampled_SRTM = np.asarray(df_SRTM.h_SRTM)
-    SRTM_cond = np.abs(h - h_sampled_SRTM) < SRTM_threshold
-    subprocess.run(f'rm {SRTM_sampled_file}',shell=True)
-    subprocess.run(f'rm {SRTM_wgs84_file}',shell=True)
-    return SRTM_cond
+# def SRTM_filter_icesat2(lon,lat,h,icesat2_file,icesat2_dir,df_city,user,pw,SRTM_threshold,EGM96_path):
+#     #Given lon/lat/h, downloads SRTM 1x1 deg tiles, merges tiles together and changes from referencing EGM96 to WGS84 ellipsoid.
+#     #Then, samples the lon/lat points of ICESat-2 at the full SRTM mosaic
+#     #If the difference between the ICESat-2 height and SRTM height is larger than the given threshold, discard that ICESat-2 point
+#     #This is primarily a good way to get rid of large outliers, e.g. due to clouds
+#     city_name = df_city.city
+#     lon_min_SRTM = np.min(lon)
+#     lon_max_SRTM = np.max(lon)
+#     lat_min_SRTM = np.min(lat)
+#     lat_max_SRTM = np.max(lat)
+#     SRTM_list = []
+#     lon_range = range(int(np.floor(lon_min_SRTM)),int(np.floor(lon_max_SRTM))+1)
+#     lat_range = range(int(np.floor(lat_min_SRTM)),int(np.floor(lat_max_SRTM))+1)
+#     for i in range(len(lon_range)):
+#         for j in range(len(lat_range)):
+#             if lon_range[i] >= 0:
+#                 lonLetter = 'E'
+#             else:
+#                 lonLetter = 'W'
+#             if lat_range[j] >= 0:
+#                 latLetter = 'N'
+#             else:
+#                 latLetter = 'S'
+#             lonCode = f"{int(np.abs(np.floor(lon_range[i]))):03d}"
+#             latCode = f"{int(np.abs(np.floor(lat_range[j]))):02d}"
+#             SRTM_id = latLetter + latCode + lonLetter + lonCode
+#             SRTM_list.append(SRTM_id)
+#     merge_command = f'gdal_merge.py -q -o {icesat2_dir}{city_name}/{city_name}_SRTM.tif '
+#     print('Downloading SRTM...')
+#     for i in range(len(SRTM_list)):
+#         DL_command = 'wget --user=' + user + ' --password=' + pw + ' https://e4ftl01.cr.usgs.gov/MEASURES/SRTMGL1.003/2000.02.11/' + SRTM_list[i] + '.SRTMGL1.hgt.zip --no-check-certificate --quiet'
+#         subprocess.run(DL_command,shell=True)
+#         exists = os.path.isfile(SRTM_list[i] + '.SRTMGL1.hgt.zip')
+#         if exists:
+#             mv_command = 'mv ' + SRTM_list[i] + '.SRTMGL1.hgt.zip ' + icesat2_dir + city_name + '/'
+#             unzip_command = 'unzip -qq ' + icesat2_dir + city_name + '/' + SRTM_list[i] + '.SRTMGL1.hgt.zip -d ' + icesat2_dir + city_name + '/'
+#             delete_command = 'rm ' + icesat2_dir + city_name + '/' + SRTM_list[i] + '.SRTMGL1.hgt.zip'
+#             subprocess.run(mv_command,shell=True)
+#             subprocess.run(unzip_command,shell=True)
+#             subprocess.run(delete_command,shell=True)
+#             merge_command = merge_command + icesat2_dir + city_name + '/' + SRTM_list[i] + '.hgt '
+#     print('Downloaded SRTM.')
+#     print('Merging SRTM...')
+#     subprocess.run(merge_command,shell=True)
+#     print('Merged SRTM.')
+#     src = gdal.Open(EGM96_path, gdalconst.GA_ReadOnly)
+#     src_proj = src.GetProjection()
+#     src_geotrans = src.GetGeoTransform()
+#     match_filename = icesat2_dir + city_name + '/' + city_name + '_SRTM.tif'
+#     match_ds = gdal.Open(match_filename,gdalconst.GA_Update)
+#     match_proj = match_ds.GetProjection()
+#     match_geotrans = match_ds.GetGeoTransform()
+#     wide = match_ds.RasterXSize
+#     high = match_ds.RasterYSize
+#     dst_filename = icesat2_dir + city_name + '/EGM96_' + city_name + '.tif'
+#     dst = gdal.GetDriverByName('GTiff').Create(dst_filename, wide, high, 1, gdalconst.GDT_Float32)
+#     dst.SetGeoTransform(match_geotrans)
+#     dst.SetProjection(match_proj)
+#     gdal.ReprojectImage(src, dst, src_proj, match_proj, gdalconst.GRA_NearestNeighbour)
+#     del dst
+#     SRTM_wgs84_file = icesat2_dir + city_name + '/' + city_name + '_SRTM_WGS84.tif'
+#     subprocess.run('gdal_calc.py -A ' + dst_filename + ' -B ' + match_filename + ' --outfile ' + SRTM_wgs84_file + ' --calc=A+B --quiet',shell=True)
+#     subprocess.run('rm ' + match_filename,shell=True)
+#     subprocess.run('rm ' + dst_filename,shell=True)
+#     for jj in range(len(SRTM_list)):
+#         subprocess.run('rm ' + icesat2_dir + city_name + '/' + SRTM_list[jj] + '.hgt',shell=True)
+#     SRTM_sampled_file = f'{icesat2_dir}{city_name}/{city_name}_sampled_SRTM.txt'
+#     print('Sampling SRTM...')
+#     subprocess.run(f'cut -d\',\' -f1-2 {icesat2_file} | sed \'s/,/ /g\' | gdallocationinfo -wgs84 -valonly {SRTM_wgs84_file} > {SRTM_sampled_file}',shell=True)
+#     print('Sampled SRTM')
+#     df_SRTM = pd.read_csv(SRTM_sampled_file,header=None,names=['h_SRTM'],dtype={'h_SRTM':'float'})
+#     h_sampled_SRTM = np.asarray(df_SRTM.h_SRTM)
+#     SRTM_cond = np.abs(h - h_sampled_SRTM) < SRTM_threshold
+#     subprocess.run(f'rm {SRTM_sampled_file}',shell=True)
+#     subprocess.run(f'rm {SRTM_wgs84_file}',shell=True)
+#     return SRTM_cond
 
 def delta_time_to_orientation(delta_time):
     '''

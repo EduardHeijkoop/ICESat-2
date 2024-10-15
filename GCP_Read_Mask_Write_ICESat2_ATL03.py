@@ -74,6 +74,7 @@ def main():
     user = config.get('GENERAL_CONSTANTS','earthdata_username') #Your NASA EarthData username
     pw = getpass.getpass('NASA EarthData password:') #Your NASA EarthData password
     pw_check = check_password_nasa_earthdata(user,pw)
+       
     if copernicus_flag:
         copernicus_threshold = config.getfloat('GCP_CONSTANTS','Copernicus_Threshold') #set your copernicus threshold here
         copernicus_threshold_str = str(copernicus_threshold).replace('.','p') #replace decimal point with p for file name
