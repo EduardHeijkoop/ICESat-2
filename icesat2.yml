@@ -11,4 +11,5 @@ dependencies:
   - pandas=2
   - h5py
   - netcdf4
+  - shapely
 prefix: /opt/miniconda3/envs/icesat2
