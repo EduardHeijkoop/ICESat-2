@@ -1,0 +1,13 @@
+name: icesat2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - gdal=3
+  - geopandas=1
+  - matplotlib=3
+  - numpy=2
+  - pandas=2
+  - h5py
+prefix: /opt/miniconda3/envs/icesat2
