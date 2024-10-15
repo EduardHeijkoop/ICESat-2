@@ -29,25 +29,28 @@ from gcp_utils import analyze_icesat2_land, copernicus_filter_icesat2
 
 def main():
     warnings.simplefilter(action='ignore')
-    config_file = 'icesat2_config.ini'
+    # config_file = 'icesat2_config.ini'
+
+    parser = argparse.ArgumentParser()
+    # parser.add_argument('--machine',default='t',help='Machine to run on.',choices=['t','b','local'])
+    parser.add_argument('--config',default='icesat2_config.ini',help='Path to configuration file.')
+    parser.add_argument('--landmask',action='store_true',default=False,help='Toggle to mask photons over land/water.')
+    parser.add_argument('--time',action='store_true',default=False,help='Toggle to add timestamps.')
+    parser.add_argument('--beams',action='store_true',default=False,help='Toggle to add beams.')
+    parser.add_argument('--strength',default='strong',type=str,help='Which beams to analyze.',choices=['strong','weak','all'])
+    parser.add_argument('--weight',action='store_true',default=False,help='Toggle to incorporate weight parameter.')
+    parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to add photon sigma.')
+    parser.add_argument('--fpb',action='store_true',default=False,help='Toggle to incorporate first photon bias.')
+    parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
+    parser.add_argument('--version',default=6,type=int,help='Which version to download.',choices=[5,6])
+    parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
+    parser.add_argument('--keep_files',action='store_true',default=False,help='Toggle to keep Copernicus DEM files.')
+
+    args = parser.parse_args()
+    config_file = args.config
     config = configparser.ConfigParser()
     config.read(config_file)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--machine',default='t',help='Machine to run on.',choices=['t','b','local'])
-    parser.add_argument('--landmask',action='store_true',default=False,help='Toggle to mask photons over land/water.')
-    parser.add_argument('--time',action='store_true',default=False,help='Toggle to print timestamps.')
-    parser.add_argument('--beams',action='store_true',default=False,help='Toggle to print beams.')
-    parser.add_argument('--strength',default='strong',type=str,help='Which beams to analyze.',choices=['strong','weak','all'])
-    parser.add_argument('--weight',action='store_true',default=False,help='Toggle to incorporate weight parameter.')
-    parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to print sigma.')
-    parser.add_argument('--fpb',action='store_true',default=False,help='Toggle to incorporate first photon bias.')
-    parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
-    parser.add_argument('--version',default=6,type=int,help='Which version to download.')
-    parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
-    parser.add_argument('--keep_files',action='store_true',default=False,help='Toggle to keep Copernicus DEM files.')
-    args = parser.parse_args()
-    machine_name = args.machine
     landmask_flag = args.landmask
     timestamp_flag = args.time
     beam_flag = args.beams
@@ -69,30 +72,30 @@ def main():
     icesat2_dir = config.get('GCP_PATHS','icesat2_dir') #output directory, which will be populated by subdirectories named after your input
     error_log_file = config.get('GCP_PATHS','error_log_file') #file to write errors to
     landmask_c_file = config.get('GENERAL_PATHS','landmask_c_file') #file with C function pnpoly, "point in polygon", to perform landmask
-    landmask_inside_flag = config.getint('GCP_CONSTANTS','landmask_inside_flag') #flag to find points inside (1) or outside (0) polygon
+    landmask_inside_flag = 1 #flag to find points inside (1) or outside (0) polygon
 
     user = config.get('GENERAL_CONSTANTS','earthdata_username') #Your NASA EarthData username
     pw = getpass.getpass('NASA EarthData password:') #Your NASA EarthData password
     pw_check = check_password_nasa_earthdata(user,pw)
        
     if copernicus_flag:
-        copernicus_threshold = config.getfloat('GCP_CONSTANTS','Copernicus_Threshold') #set your copernicus threshold here
+        copernicus_threshold = config.getfloat('GCP_CONSTANTS','copernicus_threshold') #set your copernicus threshold here
         copernicus_threshold_str = str(copernicus_threshold).replace('.','p') #replace decimal point with p for file name
         EGM2008_path = config.get('GCP_PATHS','EGM2008_path') #supplied on github
 
-    if machine_name == 'b':
-        osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
-        icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
-        error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
-        if copernicus_flag:
-            EGM2008_path = EGM2008_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/') 
-    elif machine_name == 'local':
-        osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
-        icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/','/media/heijkoop/DATA/')
-        error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/','/media/heijkoop/DATA/')
-        landmask_c_file = landmask_c_file.replace('/home/eheijkoop/Scripts/','/media/heijkoop/DATA/Dropbox/TU/PhD/Github/')
-        if copernicus_flag:
-            EGM2008_path = EGM2008_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/GEOID/')
+    # if machine_name == 'b':
+    #     osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+    #     icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+    #     error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/')
+    #     if copernicus_flag:
+    #         EGM2008_path = EGM2008_path.replace('/BhaltosMount/Bhaltos/','/Bhaltos/willismi/') 
+    # elif machine_name == 'local':
+    #     osm_shp_file = osm_shp_file.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/')
+    #     icesat2_dir = icesat2_dir.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/','/media/heijkoop/DATA/')
+    #     error_log_file = error_log_file.replace('/BhaltosMount/Bhaltos/EDUARD/Projects/DEM/','/media/heijkoop/DATA/')
+    #     landmask_c_file = landmask_c_file.replace('/home/eheijkoop/Scripts/','/media/heijkoop/DATA/Dropbox/TU/PhD/Github/')
+    #     if copernicus_flag:
+    #         EGM2008_path = EGM2008_path.replace('/BhaltosMount/Bhaltos/EDUARD/DATA_REPOSITORY/','/media/heijkoop/DATA/GEOID/')
             
     if not os.path.isdir(icesat2_dir):
         os.mkdir(icesat2_dir)
