@@ -655,7 +655,8 @@ def delta_time_to_orientation(delta_time):
                     datetime.datetime(2021,10,2,2,20,1),
                     datetime.datetime(2022,6,9,1,31,19),
                     datetime.datetime(2023,2,9,16,59,14),
-                    datetime.datetime(2023,10,27,13,26,50)]
+                    datetime.datetime(2023,10,27,13,26,50),
+                    datetime.datetime(2024,6,25,9,45,16)]
     t0 = datetime.datetime(1980,1,6,0,0,0,0)
     leap_seconds = -18
     yaw_maneuvers_gps = np.asarray(yaw_maneuvers) - leap_seconds*datetime.timedelta(seconds=1)
