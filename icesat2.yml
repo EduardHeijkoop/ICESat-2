@@ -12,7 +12,5 @@ dependencies:
   - h5py
   - netcdf4
   - shapely
-  - pip
-  - pip:
-    - harmony-py
+  - harmony-py
 prefix: /opt/miniconda3/envs/icesat2
