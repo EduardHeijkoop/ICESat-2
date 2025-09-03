@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.12
+  - python
   - gdal=3
   - geopandas=1
   - matplotlib=3
@@ -12,4 +12,7 @@ dependencies:
   - h5py
   - netcdf4
   - shapely
+  - pip
+  - pip:
+    - harmony-py
 prefix: /opt/miniconda3/envs/icesat2
