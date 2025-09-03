@@ -48,7 +48,7 @@ It is possible to filter the ICESat-2 ATL03 geolocated photons with an _a priori
 ### Config File
 The scripts in this repository depend on a number of other files & variables that need to be defined in the configuration file. Edit the `icesat2_config.ini` file in this repository or create your own and point to that when you run the script. The structure (e.g. `GCP_PATHS`) must be the same as the original.
 
-General
+General Paths & Constants
 - `earthdata_username` : Enter your NASA EarthData username here.
 - `osm_shp_file` : OpenStreetMap's land polygons are used to define the boundary between land and water. Click [here](https://osmdata.openstreetmap.de/download/land-polygons-complete-4326.zip) to download the zip file. Extract this and point to the `land_polygons.shp` file.
 - `landmask_c_file` : Point to the `pnpoly_function.c` file that is used to run the landmask algorithm. This repository comes with a file in the `C_Code` directory, so easiest is to point to that. A corresponding `.so` file will be made, ***do not*** point to that.
@@ -114,7 +114,9 @@ where `N_cpus` can be determined based on the complexity of the topography and t
 
 As an optional step, an ICESat-2 ATL03 point cloud over land can be filtered with spatially and temporally coincident Sentinel-2 multispectral imagery.
 
+`gcloud`
 
+    conda install -c conda-forge earthengine google-auth
 
 ### ICESat-2 over Water
 To run:
