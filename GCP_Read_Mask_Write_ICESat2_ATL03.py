@@ -10,7 +10,7 @@ import subprocess
 import sys
 import glob
 
-from icesat2_utils import get_osm_extents,create_bbox,move_icesat2,download_icesat2,check_h5_count,check_password_nasa_earthdata
+from icesat2_utils import get_osm_extents,create_bbox,download_icesat2,check_h5_count,check_password_nasa_earthdata
 from icesat2_utils import gps2utc,parallel_landmask,delta_time_to_orientation,beam_orientation_to_strength
 from gcp_utils import analyze_icesat2_land, copernicus_filter_icesat2
 
@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--sigma',action='store_true',default=False,help='Toggle to add photon sigma.')
     parser.add_argument('--fpb',action='store_true',default=False,help='Toggle to incorporate first photon bias.')
     parser.add_argument('--N_cpus',default=1,type=int,help='Number of CPUs to use.')
-    parser.add_argument('--version',default=6,type=int,help='Which version to download.',choices=[5,6])
+    parser.add_argument('--version',default=6,type=int,help='Which version to download.',choices=[6,7])
     parser.add_argument('--copernicus',action='store_true',default=False,help='Toggle to filter with Copernicus DEM.')
     parser.add_argument('--keep_files',action='store_true',default=False,help='Toggle to keep Copernicus DEM files.')
 
@@ -121,9 +121,8 @@ def main():
         city_name = df_extents.city[i]
         if city_name == 'Break':
             break
-        print('Working on ' + city_name)
-        if not os.path.isdir(icesat2_dir+city_name):
-            os.mkdir(icesat2_dir + city_name)
+        print(f'Working on {city_name}')
+        os.makedirs(os.path.join(icesat2_dir,city_name),exist_ok=True)
         lon_coast,lat_coast,shp_data = get_osm_extents(df_extents.iloc[i],osm_shp_file,icesat2_dir)
         bbox_code = create_bbox(icesat2_dir,df_extents.iloc[i])
         if bbox_code is not None:
@@ -162,7 +161,8 @@ def main():
             lat_high_conf = lat_high_conf[landmask]
             h_high_conf = h_high_conf[landmask]
             delta_time_total_high_conf = delta_time_total_high_conf[landmask]
-            icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked.txt'
+            # icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf_masked.txt'
+            icesat2_file = os.path.join(*[icesat2_dir,city_name,f'{city_name}_ATL03_high_conf_masked.txt'])
             if beam_flag == True:
                 beam_high_conf = beam_high_conf[landmask]
             if sigma_flag == True:
@@ -170,7 +170,7 @@ def main():
             if beam_strength == 'all':
                 strength_high_conf = strength_high_conf[landmask]
         else:
-            icesat2_file = f'{icesat2_dir}{city_name}/{city_name}_ATL03_high_conf.txt'
+            icesat2_file = os.path.join(*[icesat2_dir,city_name,f'{city_name}_ATL03_high_conf.txt'])
         utc_time_high_conf = gps2utc(delta_time_total_high_conf)
         
         if beam_strength == 'weak':

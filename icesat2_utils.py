@@ -266,17 +266,19 @@ def validate_date(date_text):
 
 def create_bbox(icesat2_dir,df_city):
     city_name = df_city.city
-    lon_min = df_city.lon_min
-    lon_max = df_city.lon_max
-    lat_min = df_city.lat_min
-    lat_max = df_city.lat_max
-    ll = [lon_min,lat_min]
-    ul = [lon_min,lat_max]
-    ur = [lon_max,lat_max]
-    lr = [lon_max,lat_min]
-    bbox_geom = shapely.geometry.Polygon([ll,ul,ur,lr,ll])
+    # lon_min = df_city.lon_min
+    # lon_max = df_city.lon_max
+    # lat_min = df_city.lat_min
+    # lat_max = df_city.lat_max
+    # ll = [lon_min,lat_min]
+    # ul = [lon_min,lat_max]
+    # ur = [lon_max,lat_max]
+    # lr = [lon_max,lat_min]
+    # bbox_geom = shapely.geometry.Polygon([ll,ul,ur,lr,ll])
+    bbox_geom = shapely.geometry.box(df_city.lon_min,df_city.lat_min,df_city.lon_max,df_city.lat_max)
     gdf_bbox = gpd.GeoDataFrame(pd.DataFrame({'Bbox':[city_name]}),geometry=[bbox_geom],crs='EPSG:4326')
-    gdf_bbox.to_file(icesat2_dir + city_name + '/' + city_name + '_bbox.shp')
+    bbox_file = os.path.join(*[icesat2_dir,city_name,f'{city_name}_bbox.shp'])
+    gdf_bbox.to_file(bbox_file)
     return None
 
 def cat_str_API(beam):
