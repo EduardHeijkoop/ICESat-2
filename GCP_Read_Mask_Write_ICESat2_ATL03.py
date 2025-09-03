@@ -136,20 +136,21 @@ def main():
             input_option_list = ['y','yes']
             if h5_check.lower() not in input_option_list:
                 subprocess.run(f'rm {icesat2_dir}{city_name}/*.h5',shell=True)
-                sync_async_code = download_icesat2(user,pw,df_extents.iloc[i],version)
-                if sync_async_code is None:
+                atl03_file_list = download_icesat2(user,pw,df_extents.iloc[i],version,icesat2_dir)
+                if len(atl03_file_list) == 0:
                     continue
-                move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
-                if move_code is not None:
-                    continue
+                # move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
+                # if move_code is not None:
+                #     continue
         else:
-            sync_async_code = download_icesat2(user,pw,df_extents.iloc[i],version)
-            if sync_async_code is None:
+            atl03_file_list = download_icesat2(user,pw,df_extents.iloc[i],version,icesat2_dir)
+            if len(atl03_file_list) == 0:
                 continue
-            move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
-            if move_code is not None:
-                continue
-        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag,beam_strength,sigma_flag,weight_flag,fpb_flag)
+            # move_code = move_icesat2(icesat2_dir,df_extents.iloc[i])
+            # if move_code is not None:
+            #     continue
+        lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_high_conf = analyze_icesat2_land(atl03_file_list,icesat2_dir,city_name,shp_data,
+                                                                                                                                 beam_flag,beam_strength,sigma_flag,weight_flag,fpb_flag)
         if beam_strength == 'all':
             sc_orient = delta_time_to_orientation(delta_time_total_high_conf)
             strength_high_conf = beam_orientation_to_strength(beam_high_conf,sc_orient)

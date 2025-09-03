@@ -6,16 +6,16 @@ from osgeo import gdal,gdalconst,osr
 import pandas as pd
 from icesat2_utils import beam_orientation_to_strength
 
-def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,beam_strength_req='strong',sigma_flag=True,weight_flag=False,fpb_flag=False):
+def analyze_icesat2_land(file_list,icesat2_dir,city_name,shp_data,beam_flag=False,beam_strength_req='strong',sigma_flag=True,weight_flag=False,fpb_flag=False):
     '''
     Given a directory of downloaded ATL03 hdf5 files,
     reads them and writes the high confidence photons to a CSV as:
     longitude,latitude,height [WGS84],time [UTC](,beam)
     '''
-    subprocess.run(f'find *.h5 > icesat2_list.txt',shell=True,cwd=f'{icesat2_dir}{city_name}')
-    icesat2_list = f'{icesat2_dir}{city_name}/icesat2_list.txt'
-    with open(icesat2_list) as f3:
-        file_list = f3.read().splitlines()
+    # subprocess.run(f'find *.h5 > icesat2_list.txt',shell=True,cwd=f'{icesat2_dir}{city_name}')
+    # icesat2_list = f'{icesat2_dir}{city_name}/icesat2_list.txt'
+    # with open(icesat2_list) as f3:
+        # file_list = f3.read().splitlines()
     beam_list = ['gt1l','gt1r','gt2l','gt2r','gt3l','gt3r']
     lon_high_conf = np.empty([0,1],dtype=float) #Initialize arrays and start reading .h5 files
     lat_high_conf = np.empty([0,1],dtype=float)
@@ -26,8 +26,8 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,beam_str
     if sigma_flag == True:
         sigma_h_high_conf = np.empty([0,1],dtype=float)
     for h5_file in file_list:
-        full_file = icesat2_dir + city_name + '/' + h5_file
-        atl03_data = h5py.File(full_file,'r')
+        # full_file = icesat2_dir + city_name + '/' + h5_file
+        atl03_data = h5py.File(h5_file,'r')
         list(atl03_data.keys())
         sc_orient = atl03_data['/orbit_info/sc_orient'][0] #Select strong beams according to S/C orientation
         if sc_orient == 2:
@@ -117,7 +117,6 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,beam_str
                 fpb_corr = compute_fpb(tmp_delta_time_total_high_conf,tmp_h_high_conf,tmp_ffb_corr_table,tmp_dead_time_avg,tmp_width_table,tmp_strength_table)
                 tmp_h_high_conf -= fpb_corr
             h_high_conf = np.append(h_high_conf,tmp_h_high_conf)
-
     '''
     A lot of data will be captured off the coast that we don't want,
     this is a quick way of getting rid of that
@@ -138,7 +137,6 @@ def analyze_icesat2_land(icesat2_dir,city_name,shp_data,beam_flag=False,beam_str
         sigma_h_high_conf = sigma_h_high_conf[~idx_tot]
     else:
         sigma_h_high_conf = None
-
     return lon_high_conf,lat_high_conf,h_high_conf,delta_time_total_high_conf,beam_high_conf,sigma_h_high_conf
 
 def compute_fpb(delta_time,height,ffb_corr_table,dead_time_avg,width_table,strength_table,window=0.04):

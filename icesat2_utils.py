@@ -19,6 +19,8 @@ import time
 import sys
 import itertools
 import base64
+import harmony
+import shutil
 
 def get_lonlat_shp(shp_path):
     '''
@@ -199,30 +201,31 @@ def utc2gps(utc_time_str):
 #         subprocess.run('rm error.xml',shell=True)
 #     return None
 
-def move_icesat2(icesat2_dir,df_city):
-    '''
-    move .zip files that are downloaded by the download_icesat2 function to the correct directory
-    unzip them there and put all .h5 files in that directory
-    remove empty subdirectories that linger after unzipping
-    remove zip files
-    create icesat2_list.txt file with list of .h5 files 
-    '''
-    city_name = df_city.city
-    city_dir = f'{icesat2_dir}{city_name}/'
-    subprocess.run(f'mv *zip {city_dir}',shell=True)
-    zip_list = sorted(glob.glob(f'{city_dir}*.zip'))
-    for zip_file in zip_list:
-        subprocess.run(f'unzip -q \'{zip_file}\' -d {city_dir}',shell=True)
-        subprocess.run(f'mv {city_dir}*/processed_ATL03*h5 {city_dir}',shell=True)
-        [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
-        subprocess.run(f'rm {zip_file}',shell=True)
-        if os.path.isfile(f'{city_dir}README'):
-            subprocess.run(f'rm {city_dir}README',shell=True)
-        json_list = sorted(glob.glob(f'{city_dir}request*.json'))
-        if len(json_list) > 0:
-            subprocess.run(f'rm {city_dir}request*.json',shell=True)
-    # subprocess.run(f'find {city_dir}*h5 -printf "%f\\n" > {city_dir}icesat2_list.txt',shell=True)
-    return None
+# def move_icesat2(icesat2_dir,df_city):
+#     '''
+#     move .zip files that are downloaded by the download_icesat2 function to the correct directory
+#     unzip them there and put all .h5 files in that directory
+#     remove empty subdirectories that linger after unzipping
+#     remove zip files
+#     create icesat2_list.txt file with list of .h5 files 
+#     '''
+#     city_name = df_city.city
+#     city_dir = f'{icesat2_dir}{city_name}/'
+#     subprocess.run(f'mv *zip {city_dir}',shell=True)
+#     zip_list = sorted(glob.glob(f'{city_dir}*.zip'))
+#     for zip_file in zip_list:
+#         subprocess.run(f'unzip -q \'{zip_file}\' -d {city_dir}',shell=True)
+#         subprocess.run(f'mv {city_dir}*/processed_ATL03*h5 {city_dir}',shell=True)
+#         [os.rmdir(os.path.join(icesat2_dir,city_name,sub_dir)) for sub_dir in os.listdir(os.path.join(icesat2_dir,city_name)) if os.path.isdir(os.path.join(icesat2_dir,city_name,sub_dir)) and len(os.listdir(os.path.join(icesat2_dir,city_name,sub_dir)))==0]
+#         subprocess.run(f'rm {zip_file}',shell=True)
+#         if os.path.isfile(f'{city_dir}README'):
+#             subprocess.run(f'rm {city_dir}README',shell=True)
+#         json_list = sorted(glob.glob(f'{city_dir}request*.json'))
+#         if len(json_list) > 0:
+#             subprocess.run(f'rm {city_dir}request*.json',shell=True)
+#     # subprocess.run(f'find {city_dir}*h5 -printf "%f\\n" > {city_dir}icesat2_list.txt',shell=True)
+#     return None
+
 
 def get_osm_extents(df_city,osm_shp_path,icesat2_dir):
     '''
@@ -231,14 +234,16 @@ def get_osm_extents(df_city,osm_shp_path,icesat2_dir):
     and returns lon/lat of that new shapefile 
     '''
     city_name = df_city.city
-    lon_min_str = str(df_city.lon_min)
-    lon_max_str = str(df_city.lon_max)
-    lat_min_str = str(df_city.lat_min)
-    lat_max_str = str(df_city.lat_max)
-    extents_str = lon_min_str + ' ' + lat_min_str + ' ' + lon_max_str + ' ' + lat_max_str
-    subset_shp = icesat2_dir + city_name + '/' + city_name + '.shp'
-    shp_command = 'ogr2ogr ' + subset_shp + ' ' +  osm_shp_path + ' -clipsrc ' + extents_str
-    subprocess.run(shp_command,shell=True)
+    # lon_min_str = str(df_city.lon_min)
+    # lon_max_str = str(df_city.lon_max)
+    # lat_min_str = str(df_city.lat_min)
+    # lat_max_str = str(df_city.lat_max)
+    # extents_str = lon_min_str + ' ' + lat_min_str + ' ' + lon_max_str + ' ' + lat_max_str
+    clip_str = ['-clipsrc',str(df_city.lon_min),str(df_city.lat_min),str(df_city.lon_max),str(df_city.lat_max)]
+    subset_shp = os.path.join(*[icesat2_dir,city_name,f'{city_name}.shp'])
+    # shp_command = 'ogr2ogr ' + subset_shp + ' ' +  osm_shp_path + ' -clipsrc ' + extents_str
+    shp_command = ['ogr2ogr',subset_shp,osm_shp_path] + clip_str
+    subprocess.run(shp_command)
     shp_data = gpd.read_file(subset_shp)
     lon_coast,lat_coast = get_lonlat_gdf(shp_data)
     return lon_coast,lat_coast,shp_data
@@ -289,206 +294,274 @@ def cat_str_API(beam):
         f'/{beam}/geophys_corr/delta_time,/{beam}/geophys_corr/tide_ocean,/{beam}/geophys_corr/dac,/{beam}/geophys_corr/tide_equilibrium,'
     return beam_command
 
-def download_icesat2(user,pw,df_city,version):
-    version_str = f'{version:03d}'
-    short_name = 'ATL03'
-    dl_path = os.getcwd()
-    symbol_list = ['|','/','-','\\','|','/','-','\\']
-    cmr_params = {'short_name':short_name}
-    cmr_collections_url = 'https://cmr.earthdata.nasa.gov/search/collections.json'
-    cmr_response = requests.get(cmr_collections_url, params=cmr_params)
-    cmr_results = json.loads(cmr_response.content)
-    available_versions = [entr['version_id'] for entr in cmr_results['feed']['entry']]
-    if not version_str in available_versions:
-        print(f'Version {version_str} not available. Available versions are: {available_versions}')
-        return None
-    city_name = df_city.city
-    t_start = df_city.t_start
-    t_end = df_city.t_end
-    t_start_valid = validate_date(t_start)
-    t_end_valid = validate_date(t_end)
-    base_url = 'https://n5eil02u.ecs.nsidc.org/egi/request'
-    granule_search_url = 'https://cmr.earthdata.nasa.gov/search/granules'
-    #Spatial bounding box:
-    bbox = f'{df_city.lon_min},{df_city.lat_min},{df_city.lon_max},{df_city.lat_max}'
-    bounding_box = bbox
-    #Temporal bounds:
-    if t_start_valid == True:
-        t_start = datetime.datetime.strptime(t_start,'%Y-%m-%d')
-        t_start_year = t_start.year
-        t_start = t_start.strftime('%Y-%m-%d')
-    else:
-        t_start = '2018-10-01'
-        t_start_year = 2018
-    if t_end_valid == True:
-        t_end = datetime.datetime.strptime(t_end,'%Y-%m-%d')
-        t_end_year = t_end.year
-        t_end = t_end.strftime('%Y-%m-%d')
-    else:
-        t_end = datetime.datetime.now().strftime('%Y-%m-%d')
-        t_end_year = datetime.datetime.now().year
-    for year in np.arange(t_start_year,t_end_year+1):
-        t_start_command = f'{year}-01-01'
-        t_end_command = f'{year}-12-31'
-        if year == t_start_year:
-            t_start_command = t_start
-        if year == t_end_year:
-            t_end_command = t_end
-        time_command = f'{t_start_command}T00:00:00Z,{t_end_command}T23:59:59Z'
-        # if np.logical_and(t_start_valid==False,t_end_valid==False):
-        #     time_command = ''
-        # else:
-        #     time_command = f'{t_start}T00:00:00Z,{t_end}T23:59:59Z'
-        #Coverage in terms of variables you want to download.
-        coverage_command = ''
-        beam_list = ['gt1l','gt1r','gt2l','gt2r','gt3l','gt3r']
-        for beam in beam_list:
-            coverage_command = coverage_command + cat_str_API(beam)
-        coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
-        search_params = {
-            'short_name': short_name,
-            'version': version_str,
-            'temporal': time_command,
-            'page_size': 100,
-            'page_num': 1,
-            'bounding_box': bbox
-        }
-        granules = []
-        headers={'Accept': 'application/json'}
-        while True:
-            response = requests.get(granule_search_url, params=search_params, headers=headers)
-            results = json.loads(response.content)
-            if len(results['feed']['entry']) == 0:
-                break
-            granules.extend(results['feed']['entry'])
-            search_params['page_num'] += 1
-        granules = [granule for granule in granules if f'SC:ATL03.{version_str}' in granule['title']]
-        print(f'There are {len(granules)} granules of {short_name} over {city_name} for the year {year}.')
-        # granule_sizes = [float(granule['granule_size']) for granule in granules]
-        # dl_size = np.sum(granule_sizes)
-        # file_size_ext = 'MB'
-        # if dl_size > 1024:
-        #     dl_size = dl_size / 1024
-        #     file_size_ext = 'GB'
-        # print(f'Total download size before spatial subsetting: {dl_size:.1f} {file_size_ext}')
-        capability_url = f'https://n5eil02u.ecs.nsidc.org/egi/capabilities/{short_name}.{version_str}.xml'
-        capability_session = requests.session()
-        capability_s = capability_session.get(capability_url)
-        capability_response = capability_session.get(capability_s.url,auth=(user,pw))
-        capability_root = ET.fromstring(capability_response.content)
-        subagent = [subset_agent.attrib for subset_agent in capability_root.iter('SubsetAgent')]
-        if len(subagent) == 0:
-            print('No subset agent found.')
-            return None
-        spatial_subsetting_flag = bool(subagent[0]['spatialSubsetting'])
-        if spatial_subsetting_flag == False:
-            print('Spatial subsetting not available.')
-            return None
-        N_sync = int(subagent[0]['maxGransSyncRequest'])
-        N_async = int(subagent[0]['maxGransAsyncRequest'])
-        if len(granules) > N_sync:
-            request_mode = 'async'
-            page_size = 100 #for some reason higher values will not download all data (more recent files will be excluded)
-            sync_async_code = 'async'
-            print('Going for asynchronous request.')
-        else:
-            request_mode = 'stream'
-            page_size = N_sync
-            sync_async_code = 'sync'
-            print('Going for synchronous request.')
-        page_num = int(np.ceil(len(granules)/page_size))
-        #empty parameters will be deleted, but can be added at user's discretion
-        param_dict = {'short_name': short_name, 
-                    'version': version_str, 
-                    'temporal': time_command, 
-                    'time': time_command.replace('Z',''), 
-                    'bounding_box': bounding_box, 
-                    'bbox': bbox, 
-                    'format': '', 
-                    'projection': '', 
-                    'projection_parameters': '',
-                    'Coverage': coverage_command, 
-                    'page_size': page_size, 
-                    'request_mode': request_mode, 
-                    'agent': '', 
-                    'email': '', }
-        param_dict = {k: v for k, v in param_dict.items() if v != ''}
-        param_string = '&'.join("{!s}={!r}".format(k,v) for (k,v) in param_dict.items())
-        param_string = param_string.replace("'","")
-        endpoint_list = [] 
-        for i in range(page_num):
-            page_val = i + 1
-            API_request = f'{base_url}?{param_string}&page_num={page_val}'
-            endpoint_list.append(API_request)
-        print(f'Downloading for {city_name}...')
-        if request_mode=='async':
-            for i in range(page_num):
-                page_val = i + 1
-                param_dict['page_num'] = page_val
-                request = capability_session.get(base_url, params=param_dict)
-                request.raise_for_status()
-                esir_root = ET.fromstring(request.content)
-                orderlist = []   
-                for order in esir_root.findall("./order/"):
-                    orderlist.append(order.text)
-                orderID = orderlist[0]
-                statusURL = base_url + '/' + orderID
-                request_response = capability_session.get(statusURL)    
-                request_response.raise_for_status()
-                request_root = ET.fromstring(request_response.content)
-                statuslist = []
-                for status in request_root.findall("./requestStatus/"):
-                    statuslist.append(status.text)
-                status = statuslist[0]
-                print(f'Processing {page_val}/{page_num} at NSIDC...')
-                symbol_count = -1
-                while status == 'pending' or status == 'processing': 
-                    symbol_count += 1
-                    idx = np.mod(symbol_count,len(symbol_list))
-                    sym = symbol_list[idx]
-                    sys.stdout.write('\r')
-                    sys.stdout.write(sym)
-                    sys.stdout.flush()
-                    time.sleep(10)
-                    loop_response = capability_session.get(statusURL)
-                    loop_response.raise_for_status()
-                    loop_root = ET.fromstring(loop_response.content)
-                    statuslist = []
-                    for status in loop_root.findall("./requestStatus/"):
-                        statuslist.append(status.text)
-                    status = statuslist[0]
-                    if status == 'pending' or status == 'processing':
-                        continue
-                if status == 'complete_with_errors' or status == 'failed':
-                    messagelist = []
-                    print('Error messages:')
-                    for message in loop_root.findall("./processInfo/"):
-                        print(message.text)
-                        messagelist.append(message.text)
-                print('\n')
-            # Download zipped order if status is complete or complete_with_errors
-                if status == 'complete' or status == 'complete_with_errors':
-                    downloadURL = f'https://n5eil02u.ecs.nsidc.org/esir/{orderID}.zip'
-                    print(f'Downloading file {page_val}/{page_num}...')
-                    zip_response = capability_session.get(downloadURL)
-                    zip_response.raise_for_status()
-                    fz = open(f'{dl_path}/{city_name}_{year}_{page_val}.zip', 'wb')
-                    fz.write(zip_response.content)
-                    fz.close()
-                else:
-                    print('Request failed.')
-        else:
-            for i in range(page_num):
-                page_val = i + 1
-                print(f'Downloading file {page_val}/{page_num}...')
-                param_dict['page_num'] = page_val
-                request = capability_session.get(base_url, params=param_dict)
-                request.raise_for_status()
-                fz = open(f'{dl_path}/{city_name}_{year}_{page_val}.zip', 'wb')
-                fz.write(request.content)
-                fz.close()
-        print('Download complete.')
-    return sync_async_code
+def version_to_cmr(version=6):
+    '''
+    Converts ATL03 release/version number to CMR ID, which harmony can retrieve
+    As of 2025-09-03 version 7 is the latest, but issues remain. NSIDC:
+    "Isolated portions of ICESat-2 Release 7 data are affected by 1) gaps in
+    instrument pointing estimates and 2) degraded orbit/pointing solutions around
+    spacecraft maneuvers. These issues can cause large errors in photon geolocation
+    and heights. Please refer to the ICESat-2 Technical References Table for a list
+    of impacted dates/times and granules, and use caution when using these data.
+    Note that the issues are being addressed, and the degraded files will be replaced."
+    '''
+    version_to_cmr_dict = {
+        '6': 'C2596864127-NSIDC_CPRD',
+        '7': 'C3326974349-NSIDC_CPRD'
+    }
+    cmr = version_to_cmr_dict[str(version)]
+    return cmr
+
+def download_icesat2(user,pw,df_city,version,icesat2_dir):
+    '''
+    Uses NASA's Harmony API to subset and download ICESat-2 granules
+    '''
+    output_dir = os.path.join(icesat2_dir,df_city.city)
+    os.makedirs(output_dir,exist_ok=True)
+    client = harmony.Client(auth=(user,pw))
+    cmr_id = version_to_cmr(version)
+    capabilities_request = harmony.CapabilitiesRequest(collection_id=cmr_id)
+    capabilities = client.submit(capabilities_request)
+    try:
+        subsetting_dict = capabilities['services'][0]['capabilities']['subsetting']
+        print('Subsetting capabilities:')
+        for k in subsetting_dict.keys():
+            print(f'{k} : {subsetting_dict[k]}')
+    except KeyError as e:
+        print('Cannot find subset capabilities! Still attempting to subset.')
+    download_request = harmony.Request(
+        collection = harmony.Collection(id=cmr_id),
+        spatial = harmony.BBox(df_city.lon_min,df_city.lat_min,df_city.lon_max,df_city.lat_max),
+        temporal = {'start':datetime.datetime.strptime(df_city.t_start,'%Y-%m-%d'),
+                    'stop':datetime.datetime.strptime(df_city.t_end,'%Y-%m-%d')}
+    )
+    job_id = client.submit(download_request)
+    print(f'Job ID: {job_id}')
+    client.wait_for_processing(job_id, show_progress=True)
+    job_summary = client.result_json(job_id)
+    print_results(job_summary)
+    futures = client.download_all(job_id, directory=output_dir, overwrite=True)
+    filelist = [f.result() for f in futures]  #Get filepaths, the .result() method also blocks further code until download is complete
+    new_filelist = []
+    for a in filelist:
+        new_name = os.path.join(os.path.dirname(a),f'ATL03_{os.path.basename(a).split("ATL03_")[1]}')
+        os.rename(a,new_name)
+        new_filelist.append(new_name)
+    new_filelist.sort()
+    return new_filelist
+
+def print_results(job_summary):
+    '''
+    Prints results of Harmony job
+    '''
+    job_status = job_summary['status']
+    if job_status.lower() != 'successful':
+        raise RuntimeError('Job did not complete successfully!')
+    original_size = job_summary['originalDataSize']
+    output_size = job_summary['outputDataSize']
+    pct_reduction = job_summary['dataSizePercentChange']
+    print(f'Achieved a {pct_reduction} ({original_size} -> {output_size}).')
+
+# def download_icesat2(user,pw,df_city,version):
+#     version_str = f'{version:03d}'
+#     short_name = 'ATL03'
+#     dl_path = os.getcwd()
+#     symbol_list = ['|','/','-','\\','|','/','-','\\']
+#     cmr_params = {'short_name':short_name}
+#     cmr_collections_url = 'https://cmr.earthdata.nasa.gov/search/collections.json'
+#     cmr_response = requests.get(cmr_collections_url, params=cmr_params)
+#     cmr_results = json.loads(cmr_response.content)
+#     available_versions = [entr['version_id'] for entr in cmr_results['feed']['entry']]
+#     if not version_str in available_versions:
+#         print(f'Version {version_str} not available. Available versions are: {available_versions}')
+#         return None
+#     city_name = df_city.city
+#     t_start = df_city.t_start
+#     t_end = df_city.t_end
+#     t_start_valid = validate_date(t_start)
+#     t_end_valid = validate_date(t_end)
+#     base_url = 'https://n5eil02u.ecs.nsidc.org/egi/request'
+#     granule_search_url = 'https://cmr.earthdata.nasa.gov/search/granules'
+#     #Spatial bounding box:
+#     bbox = f'{df_city.lon_min},{df_city.lat_min},{df_city.lon_max},{df_city.lat_max}'
+#     bounding_box = bbox
+#     #Temporal bounds:
+#     if t_start_valid == True:
+#         t_start = datetime.datetime.strptime(t_start,'%Y-%m-%d')
+#         t_start_year = t_start.year
+#         t_start = t_start.strftime('%Y-%m-%d')
+#     else:
+#         t_start = '2018-10-01'
+#         t_start_year = 2018
+#     if t_end_valid == True:
+#         t_end = datetime.datetime.strptime(t_end,'%Y-%m-%d')
+#         t_end_year = t_end.year
+#         t_end = t_end.strftime('%Y-%m-%d')
+#     else:
+#         t_end = datetime.datetime.now().strftime('%Y-%m-%d')
+#         t_end_year = datetime.datetime.now().year
+#     for year in np.arange(t_start_year,t_end_year+1):
+#         t_start_command = f'{year}-01-01'
+#         t_end_command = f'{year}-12-31'
+#         if year == t_start_year:
+#             t_start_command = t_start
+#         if year == t_end_year:
+#             t_end_command = t_end
+#         time_command = f'{t_start_command}T00:00:00Z,{t_end_command}T23:59:59Z'
+#         # if np.logical_and(t_start_valid==False,t_end_valid==False):
+#         #     time_command = ''
+#         # else:
+#         #     time_command = f'{t_start}T00:00:00Z,{t_end}T23:59:59Z'
+#         #Coverage in terms of variables you want to download.
+#         coverage_command = ''
+#         beam_list = ['gt1l','gt1r','gt2l','gt2r','gt3l','gt3r']
+#         for beam in beam_list:
+#             coverage_command = coverage_command + cat_str_API(beam)
+#         coverage_command = coverage_command + '/orbit_info/sc_orient,/ancillary_data/atlas_sdp_gps_epoch,/ancillary_data/data_start_utc,/ancillary_data/data_end_utc'
+#         search_params = {
+#             'short_name': short_name,
+#             'version': version_str,
+#             'temporal': time_command,
+#             'page_size': 100,
+#             'page_num': 1,
+#             'bounding_box': bbox
+#         }
+#         granules = []
+#         headers={'Accept': 'application/json'}
+#         while True:
+#             response = requests.get(granule_search_url, params=search_params, headers=headers)
+#             results = json.loads(response.content)
+#             if len(results['feed']['entry']) == 0:
+#                 break
+#             granules.extend(results['feed']['entry'])
+#             search_params['page_num'] += 1
+#         granules = [granule for granule in granules if f'SC:ATL03.{version_str}' in granule['title']]
+#         print(f'There are {len(granules)} granules of {short_name} over {city_name} for the year {year}.')
+#         # granule_sizes = [float(granule['granule_size']) for granule in granules]
+#         # dl_size = np.sum(granule_sizes)
+#         # file_size_ext = 'MB'
+#         # if dl_size > 1024:
+#         #     dl_size = dl_size / 1024
+#         #     file_size_ext = 'GB'
+#         # print(f'Total download size before spatial subsetting: {dl_size:.1f} {file_size_ext}')
+#         capability_url = f'https://n5eil02u.ecs.nsidc.org/egi/capabilities/{short_name}.{version_str}.xml'
+#         capability_session = requests.session()
+#         capability_s = capability_session.get(capability_url)
+#         capability_response = capability_session.get(capability_s.url,auth=(user,pw))
+#         capability_root = ET.fromstring(capability_response.content)
+#         subagent = [subset_agent.attrib for subset_agent in capability_root.iter('SubsetAgent')]
+#         if len(subagent) == 0:
+#             print('No subset agent found.')
+#             return None
+#         spatial_subsetting_flag = bool(subagent[0]['spatialSubsetting'])
+#         if spatial_subsetting_flag == False:
+#             print('Spatial subsetting not available.')
+#             return None
+#         N_sync = int(subagent[0]['maxGransSyncRequest'])
+#         N_async = int(subagent[0]['maxGransAsyncRequest'])
+#         if len(granules) > N_sync:
+#             request_mode = 'async'
+#             page_size = 100 #for some reason higher values will not download all data (more recent files will be excluded)
+#             sync_async_code = 'async'
+#             print('Going for asynchronous request.')
+#         else:
+#             request_mode = 'stream'
+#             page_size = N_sync
+#             sync_async_code = 'sync'
+#             print('Going for synchronous request.')
+#         page_num = int(np.ceil(len(granules)/page_size))
+#         #empty parameters will be deleted, but can be added at user's discretion
+#         param_dict = {'short_name': short_name, 
+#                     'version': version_str, 
+#                     'temporal': time_command, 
+#                     'time': time_command.replace('Z',''), 
+#                     'bounding_box': bounding_box, 
+#                     'bbox': bbox, 
+#                     'format': '', 
+#                     'projection': '', 
+#                     'projection_parameters': '',
+#                     'Coverage': coverage_command, 
+#                     'page_size': page_size, 
+#                     'request_mode': request_mode, 
+#                     'agent': '', 
+#                     'email': '', }
+#         param_dict = {k: v for k, v in param_dict.items() if v != ''}
+#         param_string = '&'.join("{!s}={!r}".format(k,v) for (k,v) in param_dict.items())
+#         param_string = param_string.replace("'","")
+#         endpoint_list = [] 
+#         for i in range(page_num):
+#             page_val = i + 1
+#             API_request = f'{base_url}?{param_string}&page_num={page_val}'
+#             endpoint_list.append(API_request)
+#         print(f'Downloading for {city_name}...')
+#         if request_mode=='async':
+#             for i in range(page_num):
+#                 page_val = i + 1
+#                 param_dict['page_num'] = page_val
+#                 request = capability_session.get(base_url, params=param_dict)
+#                 request.raise_for_status()
+#                 esir_root = ET.fromstring(request.content)
+#                 orderlist = []   
+#                 for order in esir_root.findall("./order/"):
+#                     orderlist.append(order.text)
+#                 orderID = orderlist[0]
+#                 statusURL = base_url + '/' + orderID
+#                 request_response = capability_session.get(statusURL)    
+#                 request_response.raise_for_status()
+#                 request_root = ET.fromstring(request_response.content)
+#                 statuslist = []
+#                 for status in request_root.findall("./requestStatus/"):
+#                     statuslist.append(status.text)
+#                 status = statuslist[0]
+#                 print(f'Processing {page_val}/{page_num} at NSIDC...')
+#                 symbol_count = -1
+#                 while status == 'pending' or status == 'processing': 
+#                     symbol_count += 1
+#                     idx = np.mod(symbol_count,len(symbol_list))
+#                     sym = symbol_list[idx]
+#                     sys.stdout.write('\r')
+#                     sys.stdout.write(sym)
+#                     sys.stdout.flush()
+#                     time.sleep(10)
+#                     loop_response = capability_session.get(statusURL)
+#                     loop_response.raise_for_status()
+#                     loop_root = ET.fromstring(loop_response.content)
+#                     statuslist = []
+#                     for status in loop_root.findall("./requestStatus/"):
+#                         statuslist.append(status.text)
+#                     status = statuslist[0]
+#                     if status == 'pending' or status == 'processing':
+#                         continue
+#                 if status == 'complete_with_errors' or status == 'failed':
+#                     messagelist = []
+#                     print('Error messages:')
+#                     for message in loop_root.findall("./processInfo/"):
+#                         print(message.text)
+#                         messagelist.append(message.text)
+#                 print('\n')
+#             # Download zipped order if status is complete or complete_with_errors
+#                 if status == 'complete' or status == 'complete_with_errors':
+#                     downloadURL = f'https://n5eil02u.ecs.nsidc.org/esir/{orderID}.zip'
+#                     print(f'Downloading file {page_val}/{page_num}...')
+#                     zip_response = capability_session.get(downloadURL)
+#                     zip_response.raise_for_status()
+#                     fz = open(f'{dl_path}/{city_name}_{year}_{page_val}.zip', 'wb')
+#                     fz.write(zip_response.content)
+#                     fz.close()
+#                 else:
+#                     print('Request failed.')
+#         else:
+#             for i in range(page_num):
+#                 page_val = i + 1
+#                 print(f'Downloading file {page_val}/{page_num}...')
+#                 param_dict['page_num'] = page_val
+#                 request = capability_session.get(base_url, params=param_dict)
+#                 request.raise_for_status()
+#                 fz = open(f'{dl_path}/{city_name}_{year}_{page_val}.zip', 'wb')
+#                 fz.write(request.content)
+#                 fz.close()
+#         print('Download complete.')
+#     return sync_async_code
 
 def landmask_icesat2(lon,lat,lon_coast,lat_coast,landmask_c_file,inside_flag):
     '''
