@@ -1,18 +1,42 @@
 name: icesat2
-# channels:
-#   - conda-forge
-#   - defaults
+channels:
+  - conda-forge
+  - defaults
 dependencies:
-  - python
+  - python>=3.12
   - gdal=3
   - geopandas=1
   - matplotlib=3
   - numpy=2
-  - pandas=2
+  - pandas>=2
+  - pytmd=3
   - h5py
-  - netcdf4
+  - scipy
   - shapely
-  - pip
-  - pip:
-    - harmony-py
-prefix: /opt/miniconda3/envs/icesat2
+  - netcdf4
+  - libnetcdf          # explicit native lib — ensures consistent resolution
+  - libjpeg-turbo      # provides libjpeg.8.dylib, required by libnetcdf on macOS
+  - tqdm
+  # - numba
+  # - boto3
+  # - botocore
+  # - cdsapi
+  # - pystac-client
+  # - stackstac
+  - pyarrow
+  - xarray
+  # - xarray-spatial
+  - rioxarray
+  - duckdb
+  - dask
+  - zarr
+  - rasterio
+  - requests
+  - harmony-py
+  # - pip
+  # - pip:
+  #   - harmony-py
+  # - xbatcher
+  # - odc-stac
+  # - gcsfs
+prefix: ~/.miniconda3/envs/icesat2
