@@ -475,6 +475,7 @@ def parallel_s2_image(idx,date,geometry,loc_name,subset_file,gee_dict):
     return 1
 
 def main():
+    print('This probably doesn\'t work anymore!')
     ee.Initialize()
     warnings.simplefilter(action='ignore')
     config_file = 'utils_config.ini'
