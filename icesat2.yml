@@ -17,15 +17,8 @@ dependencies:
   - libnetcdf          # explicit native lib — ensures consistent resolution
   - libjpeg-turbo      # provides libjpeg.8.dylib, required by libnetcdf on macOS
   - tqdm
-  # - numba
-  # - boto3
-  # - botocore
-  # - cdsapi
-  # - pystac-client
-  # - stackstac
   - pyarrow
   - xarray
-  # - xarray-spatial
   - rioxarray
   - duckdb
   - dask
@@ -34,10 +27,4 @@ dependencies:
   - requests
   - harmony-py
   - polars
-  # - pip
-  # - pip:
-  #   - harmony-py
-  # - xbatcher
-  # - odc-stac
-  # - gcsfs
 prefix: ~/.miniconda3/envs/icesat2

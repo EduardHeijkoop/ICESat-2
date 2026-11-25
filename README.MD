@@ -30,6 +30,8 @@ Clone the repository:
 
     git clone https://github.com/EduardHeijkoop/ICESat-2.git
 
+Edit the icesat2.yml file to set the prefix to your machine's, run `conda/mamba env list` to see the structure.
+
 Create a new conda environment with the right packages:
 
     conda create -f icesat2.yml
