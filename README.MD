@@ -28,7 +28,7 @@ This work was funded by the NASA Sea Level Change Team (N-SLCT) and performed at
 
 Clone the repository:
 
-    git clone https://github.com/EduardHeijkoop/ICESat-2.git
+    git clone https://github.com/EduardHeijkoop/ICESat-2.git && cd ICESat-2
 
 Edit the icesat2.yml file to set the prefix to your machine's, run `conda/mamba env list` to see the structure.
 
