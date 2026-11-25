@@ -1,2 +1,3 @@
 #ignore *.so files that are created from the *.c files
 *.so
+*.env

@@ -33,6 +33,7 @@ dependencies:
   - rasterio
   - requests
   - harmony-py
+  - polars
   # - pip
   # - pip:
   #   - harmony-py

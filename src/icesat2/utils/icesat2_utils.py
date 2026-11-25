@@ -1,6 +1,7 @@
 import harmony
 import configparser
 import os
+import glob
 import datetime
 import getpass
 import warnings
@@ -22,24 +23,29 @@ class ICESat2Downloader:
         Uses NASA's Harmony API to subset and download ICESat-2 granules
         Jobs are submitted per time group (e.g. 2 years) and per beam, because the variable subsetting for the whole granule (x6) is too long for the GET request
         '''
-        pw = getpass.getpass('Enter your NASA EarthData password:')
         project_dir = self.config.project_dir
         output_dir = os.path.join(project_dir,output_prefix)
         os.makedirs(output_dir,exist_ok=True)
+        beam_list = ['gt1r','gt1l','gt2r','gt2l','gt3r','gt3l']
+        N_already_present = np.sum([len(glob.glob(os.path.join(*[output_dir,f'{product}_Data',beam,'*.h5']))) for beam in beam_list])
+        if N_already_present > 0:
+            input_val = input(f'Found {N_already_present} {product} granules. Use these? y/n?\n').lower()
+            if input_val == 'y':
+                return sorted(glob.glob(os.path.join(*[output_dir,f'{product}_Data','**','*.h5'])))
+        pw = getpass.getpass('Enter your NASA EarthData password:')
         client = harmony.Client(auth=(self.config.earthdata_username,pw))
         cmr_id = self._version_to_cmr(product,self.config.version)
         capabilities_request = harmony.CapabilitiesRequest(collection_id=cmr_id)
         capabilities = client.submit(capabilities_request)
         if verbose == True:
             self._check_capabilities(capabilities)
-        beam_list = ['gt1r','gt1l','gt2r','gt2l','gt3r','gt3l']
         t_start_arr,t_end_arr = self._split_years()
         jobs = []
         jobs_beam_dict = {}
         full_file_list = []
         for t_start,t_end in zip(t_start_arr,t_end_arr):
             for beam in beam_list:
-                beam_dir = os.path.join(*[output_dir,'ATL03_Data',beam])
+                beam_dir = os.path.join(*[output_dir,f'{product}_Data',beam])
                 os.makedirs(beam_dir,exist_ok=True)
                 var_list = self._get_variables(product,capabilities,beam)
                 download_request = harmony.Request(
@@ -65,7 +71,7 @@ class ICESat2Downloader:
                 job_summary = client.result_json(job)
                 self._print_results(job_summary)
             beam = jobs_beam_dict[job]['beam']
-            beam_dir = os.path.join(*[output_dir,'ATL03_Data',beam])
+            beam_dir = os.path.join(*[output_dir,f'{product}_Data',beam])
             with contextlib.redirect_stdout(io.StringIO()):
                 futures = client.download_all(job, directory=beam_dir, overwrite=True)
                 file_list = [f.result() for f in futures]  #Get filepaths, the .result() method also blocks further code until download is complete

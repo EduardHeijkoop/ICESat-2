@@ -6,7 +6,6 @@ import numpy as np
 import h5py
 import pyarrow as pa
 import pyarrow.parquet as pq
-import polars as pl
 
 # from icesat2.utils.general_utils import add_home,lonlat2epsg
 from icesat2.utils.config_utils import get_icesat2_config
@@ -17,20 +16,16 @@ class ATL03Analyzer:
         self.configuration_data = configuration
         self.config = get_icesat2_config(configuration)
 
-    def process(self,output_prefix,file_list):
+    def process(self,output_prefix,file_list,surface_type='land'):
         for granule in file_list:
-            self._read_granule(output_prefix,granule)
-        full_parquet_file = os.path.join(*[self.config.project_dir,output_prefix,f'{output_prefix}_ATL03.parquet'])
+            self._read_granule(output_prefix,granule,surface_type=surface_type)
+        full_parquet_file = os.path.join(*[self.config.project_dir,output_prefix,f'{output_prefix}_ATL03_{surface_type.capitalize()}.parquet'])
         return full_parquet_file
     
-    def _read_granule(self,output_prefix,granule_path):
+    def _read_granule(self,output_prefix,granule_path,surface_type='land'):
         beam_list = ['gt1r','gt1l','gt2r','gt2l','gt3r','gt3l']
-        # print(os.path.basename(granule_path))
         with h5py.File(granule_path,'r') as f:
-            # rgt = int(np.ravel(f['orbit_info/rgt'][:])[0])
-            # cycle = int(np.ravel(f['orbit_info/cycle_number'][:])[0])
-            # orbit = (cycle-1)*1387+rgt
-            main_dir = os.path.join(*[self.config.project_dir,output_prefix,f'{output_prefix}_ATL03.parquet'])
+            main_dir = os.path.join(*[self.config.project_dir,output_prefix,f'{output_prefix}_ATL03_{surface_type.capitalize()}.parquet'])
             date = datetime.datetime.strptime(os.path.basename(granule_path).split('_')[1],'%Y%m%d%H%M%S').strftime('%Y-%m-%d')
             date_dir = os.path.join(*[main_dir,f'date={date}'])
             for beam in beam_list:
@@ -43,7 +38,7 @@ class ATL03Analyzer:
                 if strength is None or (strength != self.config.beam_strength and self.config.beam_strength != 'all'):
                     continue
                 os.makedirs(beam_dir,exist_ok=True)
-                beam_table = self._read_beam(f,beam,conf=self.config.photon_confidence,high_quality=self.config.high_quality_flag)
+                beam_table = self._read_beam(f,beam,conf=self.config.photon_confidence,high_quality=self.config.high_quality_flag,surface_type=surface_type)
                 if beam_table is None:
                     continue
                 output_file = os.path.basename(granule_path).replace(f'_subsetted_{beam}.h5',f'_{beam}.parquet')
@@ -52,18 +47,8 @@ class ATL03Analyzer:
                 #write to temporary file first, because if that fails or breaks, full parquet can still be read
                 pq.write_table(beam_table, tmp_output_file, compression='zstd', row_group_size=self.config.row_group_size)
                 os.replace(tmp_output_file, full_output_file)
-                # if beam_table is not None:
-                #     table_list.append(beam_table)
-        # if len(table_list) == 0:
-        #     return None
-        # full_table = pa.concat_tables(table_list)
-        # return full_table
 
-    def _read_beam(self,f,beam,conf='high',high_quality=True):
-        # strength = self._get_beam_strength(f,beam)
-        # if strength is None or (strength != self.config.beam_strength and self.config.beam_strength != 'all'):
-            #if strength is None (S/C is flying neither forwards or backwards) OR beam is wrong strength
-            # return None
+    def _read_beam(self,f,beam,conf='high',high_quality=True,surface_type='land'):
         schema = self._get_schema()
         h = f[f'{beam}/heights/h_ph'][:]
         N_ph = len(h)
@@ -72,15 +57,18 @@ class ATL03Analyzer:
         rgt = int(np.ravel(f['orbit_info/rgt'][:])[0])
         cycle = int(np.ravel(f['orbit_info/cycle_number'][:])[0])
         seg_of_ph = self._photon_to_segment(f,beam,N_ph)
-        signal_conf_land = f[f'{beam}/heights/signal_conf_ph'][:,0]
+        if surface_type == 'land':
+            signal_conf = f[f'{beam}/heights/signal_conf_ph'][:,0]
+        elif surface_type == 'ocean':
+            signal_conf = f[f'{beam}/heights/signal_conf_ph'][:,1]
         pod_ppd_flag = f[f'/{beam}/geolocation/podppd_flag'][:]
         pod_ppd_flag = pod_ppd_flag[seg_of_ph]
         idx_pod_ppd = pod_ppd_flag == 0
         quality_ph = f[f'/{beam}/heights/quality_ph'][:]
         if conf == 'high':
-            idx_conf = signal_conf_land == 4
+            idx_conf = signal_conf == 4
         elif conf == 'medium':
-            idx_conf = np.logical_or(signal_conf_land==3,signal_conf_land==4)
+            idx_conf = np.logical_or(signal_conf==3,signal_conf==4)
         else:
             idx_conf = np.ones(N_ph).astype(bool)
         if high_quality == True:
@@ -225,7 +213,6 @@ class ATL03Analyzer:
         '''
         leap_seconds = -18 #applicable to everything after 2017-01-01, UTC is currently 18 s behind GPS
         t0_icesat2 = np.datetime64('1980-01-06T00:00:00','ns').astype(np.int64)
-        # t0_unix = np.datetime64('1970-01-01T00:00:00','ns').astype(np.int64)
         timestamps_ns = np.rint((delta_time + leap_seconds) * 1e9).astype(np.int64)
         timestamps_ns += t0_icesat2
         timestamps_ns = timestamps_ns.view('datetime64[ns]')
